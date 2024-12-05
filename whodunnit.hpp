@@ -153,7 +153,8 @@ class WhoDunnit{
 							break;
 						}
 
-						fontSizePixels = std::max(0, int(fontSizePixels + event.mouseWheelScroll.delta));
+						// TODO: Make it logarithmic or whatever so the zoom feels intuitive
+						fontSizePixels = std::max(1, int(fontSizePixels + event.mouseWheelScroll.delta));
 
 						for (sf::Text &text : theFile.textLines) {
 							text.setCharacterSize(fontSizePixels);
@@ -169,10 +170,10 @@ class WhoDunnit{
 
 			window.clear();
 			for (int i = 0; i < theFile.textLines.size(); i++) {
-				theFile.textLines[i].setPosition(100, i*(fontSizePixels+5));
+				theFile.textLines[i].setPosition(100, i*(fontSizePixels+fontSizePixels/5));
 				window.draw(theFile.textLines[i]);
 
-				theFile.authorLines[i].setPosition(0, i*(fontSizePixels+5));
+				theFile.authorLines[i].setPosition(0, i*(fontSizePixels+fontSizePixels/5));
 				window.draw(theFile.authorLines[i]);
 			}
 			window.display();
