@@ -87,7 +87,7 @@ class WhoDunnit{
 		unsigned long long lineNum = 0;
 		BlameLine currentBlameLine;
 		for (string line; std::getline(file, line); ++lineNum) {
-			std::cout << line << std::endl;
+			//std::cout << line << std::endl;
 			if (line.empty()) continue;
 
 			if (line.front() == '\t') {
@@ -114,10 +114,6 @@ class WhoDunnit{
 		if (!gitBlame) {
 			std::cerr << "Failed to run git blame\n";
 			return 1;
-		}
-
-		for (auto e : gitBlame.value()) {
-			std::cout << "Line: " << e.line << '\n';
 		}
 
 		if (!theFont.loadFromFile("fonts/JetBrainsMono-Regular.ttf")) {
@@ -170,10 +166,17 @@ class WhoDunnit{
 
 			window.clear();
 			for (int i = 0; i < theFile.textLines.size(); i++) {
-				theFile.textLines[i].setPosition(100, i*(fontSizePixels+fontSizePixels/5));
+				float step = (fontSizePixels + fontSizePixels/5);
+				float y = i * step;
+
+				if (y + step > window.getSize().y) {
+					break;
+				}
+
+				theFile.textLines[i].setPosition(100, y);
 				window.draw(theFile.textLines[i]);
 
-				theFile.authorLines[i].setPosition(0, i*(fontSizePixels+fontSizePixels/5));
+				theFile.authorLines[i].setPosition(0, y);
 				window.draw(theFile.authorLines[i]);
 			}
 			window.display();
