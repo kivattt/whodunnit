@@ -19,6 +19,7 @@ using std::string;
 using std::vector;
 
 sf::Font theFont;
+int fontSizePixels = 15;
 
 struct BlameLine{
 	//string commitHash;
@@ -37,13 +38,13 @@ struct BlameFile{
 			sf::Text text;
 			text.setFont(theFont);
 			text.setString(e.line);
-			text.setCharacterSize(15);
+			text.setCharacterSize(fontSizePixels);
 			text.setFillColor(sf::Color::White);
 			textLines.push_back(text);
 
 			text.setFont(theFont);
 			text.setString(e.author);
-			text.setCharacterSize(15);
+			text.setCharacterSize(fontSizePixels);
 			text.setFillColor(sf::Color(150,150,150));
 			authorLines.push_back(text);
 		}
@@ -135,24 +136,41 @@ class WhoDunnit{
 					case sf::Event::Closed:
 						window.close();
 						break;
+					case sf::Event::Resized:
+						{
+							sf::FloatRect visibleArea(0.0f, 0.0f, event.size.width, event.size.height);
+							window.setView(sf::View(visibleArea));
+						}
+						break;
 					case sf::Event::KeyPressed:
 						if (event.key.code == sf::Keyboard::Escape || event.key.code == sf::Keyboard::Q) {
 							window.close();
 						}
 						break;
-					case sf::Event::Resized:
-						sf::FloatRect visibleArea(0.0f, 0.0f, event.size.width, event.size.height);
-						window.setView(sf::View(visibleArea));
+					case sf::Event::MouseWheelScrolled:
+						if (! (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RControl))) {
+							break;
+						}
+
+						fontSizePixels += event.mouseWheelScroll.delta;
+						for (sf::Text &text : theFile.textLines) {
+							text.setCharacterSize(fontSizePixels);
+						}
+						for (sf::Text &text : theFile.authorLines) {
+							text.setCharacterSize(fontSizePixels);
+						}
+						break;
+					default:
 						break;
 				}
 			}
 
 			window.clear();
 			for (int i = 0; i < theFile.textLines.size(); i++) {
-				theFile.textLines[i].setPosition(100, i*20);
+				theFile.textLines[i].setPosition(100, i*(fontSizePixels+5));
 				window.draw(theFile.textLines[i]);
 
-				theFile.authorLines[i].setPosition(0, i*20);
+				theFile.authorLines[i].setPosition(0, i*(fontSizePixels+5));
 				window.draw(theFile.authorLines[i]);
 			}
 			window.display();
