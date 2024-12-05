@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <algorithm>
 #include <optional>
 #include <cstdio>
 #include <unistd.h>
@@ -152,7 +153,8 @@ class WhoDunnit{
 							break;
 						}
 
-						fontSizePixels += event.mouseWheelScroll.delta;
+						fontSizePixels = std::max(0, int(fontSizePixels + event.mouseWheelScroll.delta));
+
 						for (sf::Text &text : theFile.textLines) {
 							text.setCharacterSize(fontSizePixels);
 						}
