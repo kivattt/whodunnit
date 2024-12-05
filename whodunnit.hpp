@@ -37,13 +37,13 @@ struct BlameFile{
 			sf::Text text;
 			text.setFont(theFont);
 			text.setString(e.line);
-			text.setCharacterSize(20);
+			text.setCharacterSize(15);
 			text.setFillColor(sf::Color::White);
 			textLines.push_back(text);
 
 			text.setFont(theFont);
 			text.setString(e.author);
-			text.setCharacterSize(20);
+			text.setCharacterSize(15);
 			text.setFillColor(sf::Color(150,150,150));
 			authorLines.push_back(text);
 		}
@@ -131,27 +131,28 @@ class WhoDunnit{
 		while (window.isOpen()) {
 			sf::Event event;
 			while (window.pollEvent(event)) {
-				if (event.type == sf::Event::Closed) {
-					window.close();
-				}
-
-				if (event.type == sf::Event::KeyPressed) {
-					if (event.key.code == sf::Keyboard::Escape || event.key.code == sf::Keyboard::Q)
+				switch (event.type) {
+					case sf::Event::Closed:
 						window.close();
-				}
-
-				if (event.type == sf::Event::Resized) {
-					sf::FloatRect visibleArea(0.0f, 0.0f, event.size.width, event.size.height);
-					window.setView(sf::View(visibleArea));
+						break;
+					case sf::Event::KeyPressed:
+						if (event.key.code == sf::Keyboard::Escape || event.key.code == sf::Keyboard::Q) {
+							window.close();
+						}
+						break;
+					case sf::Event::Resized:
+						sf::FloatRect visibleArea(0.0f, 0.0f, event.size.width, event.size.height);
+						window.setView(sf::View(visibleArea));
+						break;
 				}
 			}
 
 			window.clear();
 			for (int i = 0; i < theFile.textLines.size(); i++) {
-				theFile.textLines[i].setPosition(100, i*25);
+				theFile.textLines[i].setPosition(100, i*20);
 				window.draw(theFile.textLines[i]);
 
-				theFile.authorLines[i].setPosition(0, i*25);
+				theFile.authorLines[i].setPosition(0, i*20);
 				window.draw(theFile.authorLines[i]);
 			}
 			window.display();
