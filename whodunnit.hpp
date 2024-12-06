@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <chrono>
 #include <climits>
 #include <algorithm>
 #include <cmath>
@@ -97,6 +98,8 @@ class WhoDunnit{
 	bool movingVerticalDivider = false;
 
 	std::optional<BlameFile> run_git_blame(string filename) {
+		auto start = std::chrono::high_resolution_clock::now();
+
 		char tempFilename[] = "/tmp/whodunnit-XXXXXX";
 		int fd = mkstemp(tempFilename);
 		if (fd == -1) {
@@ -116,6 +119,10 @@ class WhoDunnit{
 			free(previousDirName);
 			return std::nullopt;
 		}
+
+		auto end = std::chrono::high_resolution_clock::now();
+		auto msInt = std::chrono::duration_cast<std::chrono::milliseconds>(end-start);
+		std::cout << "Git blame time: " << msInt.count() << "ms" << std::endl;
 
 		if (chdir(previousDirName) == -1) {
 			free(previousDirName);
@@ -188,6 +195,7 @@ class WhoDunnit{
 		window.setVerticalSyncEnabled(true);
 
 		sf::RectangleShape verticalDividerRect;
+		verticalDividerRect.setFillColor(sf::Color(100,100,100));
 
 		while (window.isOpen()) {
 			sf::Event event;
@@ -237,6 +245,11 @@ class WhoDunnit{
 						}
 						break;
 					case sf::Event::MouseMoved:
+						if (within(event.mouseMove.x, verticalDividerX-15, verticalDividerX+15)) {
+							verticalDividerRect.setFillColor(sf::Color(220,220,220));
+						} else {
+							verticalDividerRect.setFillColor(sf::Color(100,100,100));
+						}
 						if (! movingVerticalDivider) {
 							break;
 						}
@@ -281,7 +294,6 @@ class WhoDunnit{
 			}
 
 			verticalDividerRect.setSize(sf::Vector2f(2, window.getSize().y));
-			verticalDividerRect.setFillColor(sf::Color(100,100,100));
 			verticalDividerRect.setPosition(verticalDividerX, 0);
 			window.draw(verticalDividerRect);
 
