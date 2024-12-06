@@ -161,6 +161,8 @@ class WhoDunnit{
 		sf::RenderWindow window(sf::VideoMode(WIDTH, HEIGHT), "blame-viewer");
 		window.setVerticalSyncEnabled(true);
 
+		sf::RectangleShape verticalDividerRect;
+
 		while (window.isOpen()) {
 			sf::Event event;
 			while (window.pollEvent(event)) {
@@ -200,6 +202,12 @@ class WhoDunnit{
 			}
 
 			window.clear();
+
+			verticalDividerRect.setSize(sf::Vector2f(2, window.getSize().y));
+			verticalDividerRect.setPosition(140, 0);
+			verticalDividerRect.setFillColor(sf::Color(100,100,100));
+			window.draw(verticalDividerRect);
+
 			for (int i = 0; i < theFile.textLines.size(); i++) {
 				float step = (fontSizePixels + fontSizePixels/5);
 				float y = i * step;
