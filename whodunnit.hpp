@@ -34,6 +34,18 @@ struct BlameLine{
 	string line;
 };
 
+template <typename T>
+bool within(T n, T min, T max) {
+	if (n < min) {
+		return false;
+	}
+	if (n > max) {
+		return false;
+	}
+
+	return true;
+}
+
 struct BlameFile{
 	vector<BlameLine> blameLines;
 	unsigned long long oldestCommitterTime = ULLONG_MAX;
@@ -71,6 +83,10 @@ struct BlameFile{
 
 class WhoDunnit{
 	public:
+
+	int verticalDividerX = 140;
+	bool movingVerticalDivider = false;
+
 	std::optional<BlameFile> run_git_blame(string filename) {
 		char tempFilename[] = "/tmp/whodunnit-XXXXXX";
 		int fd = mkstemp(tempFilename);
@@ -197,6 +213,21 @@ class WhoDunnit{
 							text.setCharacterSize(fontSizePixels);
 						}
 						break;
+					case sf::Event::MouseButtonPressed:
+						if (within(event.mouseButton.x, verticalDividerX-15, verticalDividerX+15)) {
+							movingVerticalDivider = true;
+						}
+						break;
+					case sf::Event::MouseButtonReleased:
+						movingVerticalDivider = false;
+						break;
+					case sf::Event::MouseMoved:
+						if (! movingVerticalDivider) {
+							break;
+						}
+
+						verticalDividerX = event.mouseMove.x;
+						break;
 					default:
 						break;
 				}
@@ -205,15 +236,15 @@ class WhoDunnit{
 			window.clear();
 
 			verticalDividerRect.setSize(sf::Vector2f(2, window.getSize().y));
-			verticalDividerRect.setPosition(140, 0);
 			verticalDividerRect.setFillColor(sf::Color(100,100,100));
+			verticalDividerRect.setPosition(verticalDividerX, 0);
 			window.draw(verticalDividerRect);
 
 			for (int i = 0; i < theFile.textLines.size(); i++) {
 				float step = (fontSizePixels + fontSizePixels/5);
 				float y = i * step;
 
-				theFile.textLines[i].setPosition(150, y);
+				theFile.textLines[i].setPosition(verticalDividerX+10, y);
 				window.draw(theFile.textLines[i]);
 
 				theFile.authorLines[i].setPosition(0, y);
