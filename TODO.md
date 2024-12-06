@@ -1,3 +1,4 @@
+- Line numbers
 - File picker on the right?
 
 - Don't use system()
