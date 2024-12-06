@@ -42,7 +42,6 @@ struct BlameFile{
 	double committer_time_0_to_1(unsigned long long committerTime) {
 		double zeroToOne = double(committerTime - oldestCommitterTime) / double(newestCommitterTime - oldestCommitterTime);
 		return zeroToOne;
-		//return std::pow(zeroToOne, 0.3d);
 	}
 
 	vector<sf::Text> textLines;

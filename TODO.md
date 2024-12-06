@@ -1,6 +1,8 @@
+- File picker on the right?
+
 - Don't use system()
 ```cpp
-string run_git_blam(string filename) {
+string run_git_blame(string filename) {
 	pid_t pid = fork();
 	if (pid < 0) {
 		return ""; // TODO: Errors
