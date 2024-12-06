@@ -16,8 +16,8 @@
 
 #include "util.hpp"
 
-#define WIDTH 1280
-#define HEIGHT 720
+#define START_WIDTH 1280
+#define START_HEIGHT 720
 
 using std::string;
 using std::vector;
@@ -93,7 +93,7 @@ struct BlameFile{
 class WhoDunnit{
 	public:
 
-	int verticalDividerX = 140;
+	int verticalDividerX = 190;
 	bool movingVerticalDivider = false;
 
 	std::optional<BlameFile> run_git_blame(string filename) {
@@ -184,7 +184,7 @@ class WhoDunnit{
 
 		BlameFile theFile = blameFile.value();
 
-		sf::RenderWindow window(sf::VideoMode(WIDTH, HEIGHT), "blame-viewer");
+		sf::RenderWindow window(sf::VideoMode(START_WIDTH, START_HEIGHT), "blame-viewer");
 		window.setVerticalSyncEnabled(true);
 
 		sf::RectangleShape verticalDividerRect;
@@ -251,12 +251,22 @@ class WhoDunnit{
 			window.clear();
 
 			for (int i = 0; i < theFile.textLines.size(); i++) {
-				float step = (fontSizePixels + fontSizePixels/5);
+				float step = (fontSizePixels + fontSizePixels/2);
 				float y = i * step;
 
 				theFile.blameBgs[i].setSize(sf::Vector2f(verticalDividerX, step));
 				theFile.blameBgs[i].setPosition(0, y);
 				window.draw(theFile.blameBgs[i]);
+
+				sf::RectangleShape rect;
+				rect.setSize(sf::Vector2f(window.getSize().x, step));
+				rect.setPosition(verticalDividerX+2, y);
+				sf::Color c = theFile.blameBgs[i].getFillColor();
+				c.r /= 5;
+				c.g /= 5;
+				c.b /= 5;
+				rect.setFillColor(c);
+				window.draw(rect);
 
 				theFile.authorLines[i].setPosition(0, y);
 				window.draw(theFile.authorLines[i]);
