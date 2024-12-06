@@ -19,6 +19,8 @@
 
 #define START_WIDTH 1280
 #define START_HEIGHT 720
+#define VERT_DIVIDER_FROM_RIGHT 100
+#define VERT_DIVIDER_FROM_LEFT 100
 
 using std::string;
 using std::vector;
@@ -57,6 +59,7 @@ struct BlameFile{
 		return zeroToOne;
 	}
 
+	int scrollPositionPixels = 0;
 	vector<sf::Text> textLines;
 	vector<sf::Text> authorLines;
 	vector<sf::RectangleShape> blameBgs;
@@ -208,15 +211,38 @@ class WhoDunnit{
 						{
 							sf::FloatRect visibleArea(0.0f, 0.0f, event.size.width, event.size.height);
 							window.setView(sf::View(visibleArea));
+
+							verticalDividerX = std::min(std::max(0, int(window.getSize().x) - VERT_DIVIDER_FROM_RIGHT), verticalDividerX);
+							verticalDividerX = std::max(VERT_DIVIDER_FROM_LEFT, verticalDividerX);
 						}
 						break;
 					case sf::Event::KeyPressed:
-						if (event.key.code == sf::Keyboard::Escape || event.key.code == sf::Keyboard::Q) {
-							window.close();
+						switch (event.key.code) {
+							case sf::Keyboard::Escape:
+							case sf::Keyboard::Q:
+								window.close();
+								break;
+							case sf::Keyboard::Home:
+								if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RControl)) {
+									theFile.scrollPositionPixels = 0;
+								}
+								break;
+							case sf::Keyboard::End:
+								if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RControl)) {
+									float step = (fontSizePixels + fontSizePixels/2);
+									theFile.scrollPositionPixels = theFile.textLines.size() * step - window.getSize().y;
+								}
+								break;
 						}
 						break;
 					case sf::Event::MouseWheelScrolled:
 						if (! (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RControl))) {
+							// Scrolling
+							theFile.scrollPositionPixels -= event.mouseWheelScroll.delta * 25;
+							if (theFile.scrollPositionPixels < 0) {
+								theFile.scrollPositionPixels = 0;
+							}
+							std::cout << theFile.scrollPositionPixels << '\n';
 							break;
 						}
 
@@ -245,7 +271,7 @@ class WhoDunnit{
 						}
 						break;
 					case sf::Event::MouseMoved:
-						if (within(event.mouseMove.x, verticalDividerX-15, verticalDividerX+15)) {
+						if (movingVerticalDivider || within(event.mouseMove.x, verticalDividerX-15, verticalDividerX+15)) {
 							verticalDividerRect.setFillColor(sf::Color(220,220,220));
 						} else {
 							verticalDividerRect.setFillColor(sf::Color(100,100,100));
@@ -254,7 +280,8 @@ class WhoDunnit{
 							break;
 						}
 
-						verticalDividerX = event.mouseMove.x;
+						verticalDividerX = std::max(VERT_DIVIDER_FROM_LEFT, event.mouseMove.x);
+						verticalDividerX = std::min(verticalDividerX, std::max(0, int(window.getSize().x) - VERT_DIVIDER_FROM_RIGHT));
 						break;
 					default:
 						break;
@@ -262,18 +289,22 @@ class WhoDunnit{
 			}
 
 			window.clear();
+			float yOffset = theFile.scrollPositionPixels % fontSizePixels;
+			//int startIdx = std::max(0, int(std::floor(theFile.scrollPositionPixels / fontSizePixels)));
+			float step = (fontSizePixels + fontSizePixels/2);
+			int startIdx = std::max(0, int(std::floor(theFile.scrollPositionPixels / step)));
 
-			for (int i = 0; i < theFile.textLines.size(); i++) {
-				float step = (fontSizePixels + fontSizePixels/2);
-				float y = i * step;
+			for (int i = startIdx; i < theFile.textLines.size(); i++) {
+				int iFromZero = i - startIdx;
+				float y = iFromZero * step;
 
 				theFile.blameBgs[i].setSize(sf::Vector2f(verticalDividerX, step));
-				theFile.blameBgs[i].setPosition(0, y);
+				theFile.blameBgs[i].setPosition(0, y - yOffset);
 				window.draw(theFile.blameBgs[i]);
 
 				sf::RectangleShape rect;
 				rect.setSize(sf::Vector2f(window.getSize().x, step));
-				rect.setPosition(verticalDividerX+2, y);
+				rect.setPosition(verticalDividerX+2, y - yOffset);
 				sf::Color c = theFile.blameBgs[i].getFillColor();
 				c.r /= 5;
 				c.g /= 5;
@@ -281,16 +312,15 @@ class WhoDunnit{
 				rect.setFillColor(c);
 				window.draw(rect);
 
-				theFile.authorLines[i].setPosition(0, y);
+				theFile.authorLines[i].setPosition(0, y - yOffset);
 				window.draw(theFile.authorLines[i]);
 
-				theFile.textLines[i].setPosition(verticalDividerX+10, y);
+				theFile.textLines[i].setPosition(verticalDividerX+10, y - yOffset);
 				window.draw(theFile.textLines[i]);
 
 				if (y + step > window.getSize().y) {
 					break;
 				}
-
 			}
 
 			verticalDividerRect.setSize(sf::Vector2f(2, window.getSize().y));
