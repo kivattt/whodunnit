@@ -58,6 +58,7 @@ struct BlameFile{
 
 	vector<sf::Text> textLines;
 	vector<sf::Text> authorLines;
+	vector<sf::RectangleShape> blameBgs;
 
 	void set_texts() {
 		for (BlameLine &e : blameLines) {
@@ -72,11 +73,19 @@ struct BlameFile{
 			text.setString(e.author);
 			text.setCharacterSize(fontSizePixels);
 
-			const double lowestBrightness = 0.3;
-			int color = (lowestBrightness + committer_time_0_to_1(e.committerTime) * (1.0 - lowestBrightness)) * 255;
-
-			text.setFillColor(sf::Color(color, color/1.5, color/1.5));
+			//text.setFillColor(sf::Color(color, color/1.5, color/1.5));
+			text.setFillColor(sf::Color(200,200,200));
 			authorLines.push_back(text);
+
+			/*const double lowestBrightness = 0.3;
+			int color = (lowestBrightness + committer_time_0_to_1(e.committerTime) * (1.0 - lowestBrightness)) * 255;*/
+
+			sf::RectangleShape rect;
+			//rect.setFillColor(sf::Color(color, color/1.5, color/1.5));
+			//int randomHue = rand() / double(RAND_MAX) * 360;
+			double zeroToOne = committer_time_0_to_1(e.committerTime);
+			rect.setFillColor(hsv_to_rgb(221, zeroToOne*0.65, 0.7d * (0.3 + zeroToOne * (1 - 0.3))));
+			blameBgs.push_back(rect);
 		}
 	}
 };
@@ -214,12 +223,18 @@ class WhoDunnit{
 						}
 						break;
 					case sf::Event::MouseButtonPressed:
+						if (event.mouseButton.button != sf::Mouse::Left) {
+							break;
+						}
+
 						if (within(event.mouseButton.x, verticalDividerX-15, verticalDividerX+15)) {
 							movingVerticalDivider = true;
 						}
 						break;
 					case sf::Event::MouseButtonReleased:
-						movingVerticalDivider = false;
+						if (event.mouseButton.button == sf::Mouse::Left) {
+							movingVerticalDivider = false;
+						}
 						break;
 					case sf::Event::MouseMoved:
 						if (! movingVerticalDivider) {
@@ -238,6 +253,10 @@ class WhoDunnit{
 			for (int i = 0; i < theFile.textLines.size(); i++) {
 				float step = (fontSizePixels + fontSizePixels/5);
 				float y = i * step;
+
+				theFile.blameBgs[i].setSize(sf::Vector2f(verticalDividerX, step));
+				theFile.blameBgs[i].setPosition(0, y);
+				window.draw(theFile.blameBgs[i]);
 
 				theFile.authorLines[i].setPosition(0, y);
 				window.draw(theFile.authorLines[i]);
