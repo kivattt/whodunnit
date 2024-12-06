@@ -105,7 +105,9 @@ class WhoDunnit{
 		BlameLine currentBlameLine;
 		for (string line; std::getline(file, line); ++lineNum) {
 			//std::cout << line << std::endl;
-			if (line.empty()) continue;
+			if (line.empty()) {
+				continue;
+			}
 
 			if (line.front() == '\t') {
 				currentBlameLine.line = line.substr(1);
@@ -145,12 +147,12 @@ class WhoDunnit{
 
 	int run(string filename) {
 		std::optional<BlameFile> blameFile = run_git_blame(filename);
-		if (!blameFile) {
+		if (! blameFile) {
 			std::cerr << "Failed to run git blame\n";
 			return 1;
 		}
 
-		if (!theFont.loadFromFile("fonts/JetBrainsMono-Regular.ttf")) {
+		if (! theFont.loadFromFile("fonts/JetBrainsMono-Regular.ttf")) {
 			std::cerr << "Failed to load font at fonts/JetBrainsMono-Regular.ttf";
 			return 1;
 		}
