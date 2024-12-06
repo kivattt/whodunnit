@@ -3,8 +3,11 @@
 
 #include <iostream>
 #include <fstream>
+#include <climits>
 #include <algorithm>
+#include <cmath>
 #include <optional>
+#include <cstdlib>
 #include <cstdio>
 #include <unistd.h>
 #include <string>
@@ -25,28 +28,43 @@ int fontSizePixels = 15;
 struct BlameLine{
 	//string commitHash;
 	string author;
+
+	unsigned long long committerTime = 0;
+
 	string line;
 };
 
 struct BlameFile{
 	vector<BlameLine> blameLines;
+	unsigned long long oldestCommitterTime = ULLONG_MAX;
+	unsigned long long newestCommitterTime = 0;
+
+	double committer_time_0_to_1(unsigned long long committerTime) {
+		double zeroToOne = double(committerTime - oldestCommitterTime) / double(newestCommitterTime - oldestCommitterTime);
+		return zeroToOne;
+		//return std::pow(zeroToOne, 0.3d);
+	}
+
 	vector<sf::Text> textLines;
 	vector<sf::Text> authorLines;
 
-	BlameFile(vector<BlameLine> newBlameLines) {
-		blameLines = newBlameLines;
+	void set_texts() {
 		for (BlameLine &e : blameLines) {
 			sf::Text text;
 			text.setFont(theFont);
 			text.setString(e.line);
 			text.setCharacterSize(fontSizePixels);
-			text.setFillColor(sf::Color::White);
+			text.setFillColor(sf::Color(200,200,200));
 			textLines.push_back(text);
 
 			text.setFont(theFont);
 			text.setString(e.author);
 			text.setCharacterSize(fontSizePixels);
-			text.setFillColor(sf::Color(150,150,150));
+
+			const double lowestBrightness = 0.3;
+			int color = (lowestBrightness + committer_time_0_to_1(e.committerTime) * (1.0 - lowestBrightness)) * 255;
+
+			text.setFillColor(sf::Color(color, color/1.5, color/1.5));
 			authorLines.push_back(text);
 		}
 	}
@@ -54,7 +72,7 @@ struct BlameFile{
 
 class WhoDunnit{
 	public:
-	std::optional<vector<BlameLine>> run_git_blame(string filename) {
+	std::optional<BlameFile> run_git_blame(string filename) {
 		char tempFilename[] = "/tmp/whodunnit-XXXXXX";
 		int fd = mkstemp(tempFilename);
 		if (fd == -1) {
@@ -80,7 +98,7 @@ class WhoDunnit{
 			return std::nullopt;
 		}
 
-		vector<BlameLine> ret;
+		BlameFile ret;
 
 		std::ifstream file(tempFilename);
 
@@ -92,13 +110,28 @@ class WhoDunnit{
 
 			if (line.front() == '\t') {
 				currentBlameLine.line = line.substr(1);
-				ret.push_back(currentBlameLine);
+				ret.blameLines.push_back(currentBlameLine);
 				currentBlameLine = BlameLine();
 				continue;
 			}
 
+			// We could be doing bounds-checking before the line.substr() is called
 			if (line.starts_with("author ")) {
 				currentBlameLine.author = line.substr(string("author ").size());
+				continue;
+			}
+
+			if (line.starts_with("committer-time ")) {
+				unsigned long long time = 0;
+				try {
+					time = std::stoull(line.substr(string("committer-time ").size()).c_str());
+				} catch(std::invalid_argument &e) {
+					continue;
+				}
+				ret.oldestCommitterTime = std::min(time, ret.oldestCommitterTime);
+				ret.newestCommitterTime = std::max(time, ret.newestCommitterTime);
+				currentBlameLine.committerTime = time;
+				continue;
 			}
 		}
 
@@ -106,12 +139,14 @@ class WhoDunnit{
 		unlink(tempFilename);
 
 		free(previousDirName);
+
+		ret.set_texts();
 		return ret;
 	}
 
 	int run(string filename) {
-		std::optional<vector<BlameLine>> gitBlame = run_git_blame(filename);
-		if (!gitBlame) {
+		std::optional<BlameFile> blameFile = run_git_blame(filename);
+		if (!blameFile) {
 			std::cerr << "Failed to run git blame\n";
 			return 1;
 		}
@@ -121,7 +156,7 @@ class WhoDunnit{
 			return 1;
 		}
 
-		BlameFile theFile(gitBlame.value());
+		BlameFile theFile = blameFile.value();
 
 		sf::RenderWindow window(sf::VideoMode(WIDTH, HEIGHT), "blame-viewer");
 		window.setVerticalSyncEnabled(true);
@@ -173,7 +208,7 @@ class WhoDunnit{
 					break;
 				}
 
-				theFile.textLines[i].setPosition(100, y);
+				theFile.textLines[i].setPosition(150, y);
 				window.draw(theFile.textLines[i]);
 
 				theFile.authorLines[i].setPosition(0, y);
