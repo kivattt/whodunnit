@@ -230,7 +230,7 @@ class WhoDunnit{
 							case sf::Keyboard::End:
 								if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RControl)) {
 									float step = (fontSizePixels + fontSizePixels/2);
-									theFile.scrollPositionPixels = theFile.textLines.size() * step - window.getSize().y;
+									theFile.scrollPositionPixels = std::max(0, int(theFile.textLines.size() * step - window.getSize().y));
 								}
 								break;
 						}
@@ -238,11 +238,10 @@ class WhoDunnit{
 					case sf::Event::MouseWheelScrolled:
 						if (! (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RControl))) {
 							// Scrolling
-							theFile.scrollPositionPixels -= event.mouseWheelScroll.delta * 25;
+							theFile.scrollPositionPixels -= event.mouseWheelScroll.delta * 60;
 							if (theFile.scrollPositionPixels < 0) {
 								theFile.scrollPositionPixels = 0;
 							}
-							std::cout << theFile.scrollPositionPixels << '\n';
 							break;
 						}
 
