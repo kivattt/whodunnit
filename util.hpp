@@ -20,21 +20,30 @@ string sanitize_shell_argument(const string &input){
 	return "$(printf '%b' '" + octal + "')";
 }
 
-string without_ending_slash(string input) {
-	if (input.empty() || input.back() != '/') {
-		return input;
+string without_ending_slash(string path) {
+	if (path.empty() || path.back() != '/') {
+		return path;
 	}
 
-	return input.substr(0, input.size() - 1);
+	return path.substr(0, path.size() - 1);
 }
 
-string parent_dir(string filename) {
-	size_t lastSlash = filename.find_last_of('/');
+string parent_dir(string path) {
+	size_t lastSlash = path.find_last_of('/');
 	if (lastSlash == string::npos) {
-		return filename;
+		return path;
 	}
 
-	return without_ending_slash(filename.substr(0, lastSlash));
+	return without_ending_slash(path.substr(0, lastSlash));
+}
+
+string basename(string path) {
+	size_t lastSlash = path.find_last_of('/');
+	if (lastSlash == string::npos) {
+		return path;
+	}
+
+	return path.substr(lastSlash+1);
 }
 
 sf::Color hsv_to_rgb(double h, double s, double v) {

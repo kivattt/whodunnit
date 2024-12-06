@@ -184,7 +184,7 @@ class WhoDunnit{
 
 		BlameFile theFile = blameFile.value();
 
-		sf::RenderWindow window(sf::VideoMode(START_WIDTH, START_HEIGHT), "blame-viewer");
+		sf::RenderWindow window(sf::VideoMode(START_WIDTH, START_HEIGHT), "whodunnit - " + basename(filename));
 		window.setVerticalSyncEnabled(true);
 
 		sf::RectangleShape verticalDividerRect;

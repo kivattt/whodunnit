@@ -34,5 +34,20 @@ int main() {
 		}
 	}
 
+	std::cout << "Testing basename()" << std::endl;
+	expected = {
+		{"/home/user", "user"},
+		{"/home/user/", ""},
+		{"/home/user/file.txt", "file.txt"},
+		{"file.txt", "file.txt"},
+	};
+	for (auto &[input, expected] : expected) {
+		const string got = basename(input);
+		if (got != expected) {
+			std::cerr << "Expected \"" << expected << "\", but got: \"" << got << "\"" << std::endl;
+			return 1;
+		}
+	}
+
 	std::cout << "\nTests succeeded" << std::endl;
 }
