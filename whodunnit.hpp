@@ -212,15 +212,16 @@ class WhoDunnit{
 				float step = (fontSizePixels + fontSizePixels/5);
 				float y = i * step;
 
-				if (y + step > window.getSize().y) {
-					break;
-				}
-
 				theFile.textLines[i].setPosition(150, y);
 				window.draw(theFile.textLines[i]);
 
 				theFile.authorLines[i].setPosition(0, y);
 				window.draw(theFile.authorLines[i]);
+
+				if (y + step > window.getSize().y) {
+					break;
+				}
+
 			}
 			window.display();
 		}
