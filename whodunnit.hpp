@@ -235,26 +235,27 @@ class WhoDunnit{
 
 			window.clear();
 
-			verticalDividerRect.setSize(sf::Vector2f(2, window.getSize().y));
-			verticalDividerRect.setFillColor(sf::Color(100,100,100));
-			verticalDividerRect.setPosition(verticalDividerX, 0);
-			window.draw(verticalDividerRect);
-
 			for (int i = 0; i < theFile.textLines.size(); i++) {
 				float step = (fontSizePixels + fontSizePixels/5);
 				float y = i * step;
 
-				theFile.textLines[i].setPosition(verticalDividerX+10, y);
-				window.draw(theFile.textLines[i]);
-
 				theFile.authorLines[i].setPosition(0, y);
 				window.draw(theFile.authorLines[i]);
+
+				theFile.textLines[i].setPosition(verticalDividerX+10, y);
+				window.draw(theFile.textLines[i]);
 
 				if (y + step > window.getSize().y) {
 					break;
 				}
 
 			}
+
+			verticalDividerRect.setSize(sf::Vector2f(2, window.getSize().y));
+			verticalDividerRect.setFillColor(sf::Color(100,100,100));
+			verticalDividerRect.setPosition(verticalDividerX, 0);
+			window.draw(verticalDividerRect);
+
 			window.display();
 		}
 
