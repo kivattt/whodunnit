@@ -30,7 +30,7 @@ sf::Font theFont;
 int fontSizePixels = 15;
 
 struct BlameLine{
-	//string commitHash;
+	string commitHash;
 	string author;
 
 	unsigned long long committerTime = 0;
@@ -42,6 +42,8 @@ struct BlameFile{
 	vector<BlameLine> blameLines;
 	unsigned long long oldestCommitterTime = ULLONG_MAX;
 	unsigned long long newestCommitterTime = 0;
+	string oldestCommitHash = "";
+	string newestCommitHash = "";
 
 	double committer_time_0_to_1(unsigned long long committerTime) {
 		double zeroToOne = double(committerTime - oldestCommitterTime) / double(newestCommitterTime - oldestCommitterTime);
@@ -86,9 +88,12 @@ struct BlameFile{
 class WhoDunnit{
 	public:
 
+	vector<string> ignoreRevsList;
+
 	int verticalDividerX = 190;
 	bool movingVerticalDivider = false;
 
+	// Ignores commit hashes from the ignoreRevsList
 	std::optional<BlameFile> run_git_blame(string filename) {
 		auto start = std::chrono::high_resolution_clock::now();
 
@@ -97,8 +102,21 @@ class WhoDunnit{
 		if (fd == -1) {
 			return std::nullopt;
 		}
-
 		close(fd);
+
+		// Temporary file for --ignore-revs-file
+		char tempIgnoreRevsFilename[] = "/tmp/whodunnit-i-XXXXXX";
+		int ignoreRevsFd = mkstemp(tempIgnoreRevsFilename);
+		if (ignoreRevsFd == -1) {
+			return std::nullopt;
+		}
+		close(ignoreRevsFd);
+
+		std::ofstream ignoreRevsFile(tempIgnoreRevsFilename, std::ofstream::out | std::ofstream::trunc);
+		for (string revision : ignoreRevsList) {
+			ignoreRevsFile << revision << '\n';
+		}
+		ignoreRevsFile.close();
 
 		char *previousDirName = get_current_dir_name();
 		if (chdir(parent_dir(filename).c_str()) == -1) {
@@ -106,7 +124,7 @@ class WhoDunnit{
 			return std::nullopt;
 		}
 
-		int exitCode = system(string("git blame --line-porcelain -t " + sanitize_shell_argument(filename) + " > " + tempFilename).c_str());
+		int exitCode = system(string("git blame --line-porcelain -t --ignore-revs-file " + string(tempIgnoreRevsFilename) + " " + sanitize_shell_argument(filename) + " > " + tempFilename).c_str());
 		if (exitCode != 0) {
 			free(previousDirName);
 			return std::nullopt;
@@ -125,6 +143,7 @@ class WhoDunnit{
 
 		std::ifstream file(tempFilename);
 
+		bool lookingForCommitHash = true;
 		unsigned long long lineNum = 0;
 		BlameLine currentBlameLine;
 		for (string line; std::getline(file, line); ++lineNum) {
@@ -133,10 +152,24 @@ class WhoDunnit{
 				continue;
 			}
 
+			if (lookingForCommitHash) {
+				size_t firstSpace = line.find_first_of(' ');
+				if (firstSpace == string::npos) {
+					currentBlameLine.commitHash = line;
+				} else {
+					currentBlameLine.commitHash = line.substr(0, firstSpace);
+				}
+
+				lookingForCommitHash = false;
+				continue;
+			}
+
 			if (line.front() == '\t') {
 				currentBlameLine.line = line.substr(1);
 				ret.blameLines.push_back(currentBlameLine);
 				currentBlameLine = BlameLine();
+
+				lookingForCommitHash = true;
 				continue;
 			}
 
@@ -162,6 +195,8 @@ class WhoDunnit{
 
 		// Delete the temp file
 		unlink(tempFilename);
+		// Delete the temporary file for --ignore-revs-file
+		unlink(tempIgnoreRevsFilename);
 
 		free(previousDirName);
 
