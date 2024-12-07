@@ -1,6 +1,8 @@
 - Line numbers
 - File picker on the right?
 
+- Look into the `git blame --incremental` flag
+
 - Don't use system()
 ```cpp
 string run_git_blame(string filename) {
