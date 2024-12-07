@@ -62,6 +62,7 @@ class Button{
 			case sf::Event::MouseButtonReleased:
 				backgroundRectVisible = within((float)event.mouseButton.x, x, x+width) && within((float)event.mouseButton.y, y, y+height);
 				if (!backgroundRectVisible) {
+					pressed = false;
 					break;
 				}
 
