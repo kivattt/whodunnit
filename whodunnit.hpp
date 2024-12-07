@@ -16,6 +16,7 @@
 #include <SFML/Graphics.hpp>
 
 #include "util.hpp"
+#include "button.hpp"
 
 #define START_WIDTH 1280
 #define START_HEIGHT 720
@@ -36,18 +37,6 @@ struct BlameLine{
 
 	string line;
 };
-
-template <typename T>
-bool within(T n, T min, T max) {
-	if (n < min) {
-		return false;
-	}
-	if (n > max) {
-		return false;
-	}
-
-	return true;
-}
 
 struct BlameFile{
 	vector<BlameLine> blameLines;
@@ -200,9 +189,27 @@ class WhoDunnit{
 		sf::RectangleShape verticalDividerRect;
 		verticalDividerRect.setFillColor(sf::Color(100,100,100));
 
+		/*sf::RectangleShape topbarRect;
+		topbarRect.setPosition(0,0);
+		topbarRect.setSize(sf::Vector2f(window.getSize().x, topbarHeight));
+		topbarRect.setFillColor(sf::Color(160,160,160));*/
+
+		Button button1({0,0}, {40,40}, theFont, "<");
+		button1.set_on_click([](){
+			std::cout << "button1 clicked!" << std::endl;
+		});
+
+		Button button2({40,0}, {40,40}, theFont, ">");
+		button2.set_on_click([](){
+			std::cout << "button2 clicked!" << std::endl;
+		});
+
 		while (window.isOpen()) {
 			sf::Event event;
 			while (window.pollEvent(event)) {
+				button1.update(event);
+				button2.update(event);
+
 				switch (event.type) {
 					case sf::Event::Closed:
 						window.close();
@@ -245,6 +252,7 @@ class WhoDunnit{
 							break;
 						}
 
+						// Zooming
 						// TODO: Make it logarithmic or whatever so the zoom feels intuitive
 						fontSizePixels = std::max(1, int(fontSizePixels + event.mouseWheelScroll.delta));
 
@@ -287,8 +295,13 @@ class WhoDunnit{
 				}
 			}
 
-			window.clear();
-			float yOffset = theFile.scrollPositionPixels % fontSizePixels;
+			window.clear(sf::Color(10,10,10));
+
+			int topbarHeight = 35;
+			button1.set_size(topbarHeight, topbarHeight);
+			button2.set_size(topbarHeight, topbarHeight);
+
+			float yOffset = theFile.scrollPositionPixels % fontSizePixels - topbarHeight;
 			//int startIdx = std::max(0, int(std::floor(theFile.scrollPositionPixels / fontSizePixels)));
 			float step = (fontSizePixels + fontSizePixels/2);
 			int startIdx = std::max(0, int(std::floor(theFile.scrollPositionPixels / step)));
@@ -322,9 +335,25 @@ class WhoDunnit{
 				}
 			}
 
+			sf::VertexArray topbarRect(sf::TriangleStrip, 4);
+			topbarRect[0].position = sf::Vector2f(0,0);
+			topbarRect[1].position = sf::Vector2f(window.getSize().x,0);
+			topbarRect[2].position = sf::Vector2f(0,topbarHeight);
+			topbarRect[3].position = sf::Vector2f(window.getSize().x, topbarHeight);
+
+			topbarRect[0].color = sf::Color(50,50,50);
+			topbarRect[2].color = sf::Color(50,50,50);
+			topbarRect[1].color = sf::Color(10,10,10);
+			topbarRect[3].color = sf::Color(10,10,10);
+
+			window.draw(topbarRect);
+
 			verticalDividerRect.setSize(sf::Vector2f(2, window.getSize().y));
-			verticalDividerRect.setPosition(verticalDividerX, 0);
+			verticalDividerRect.setPosition(verticalDividerX, topbarHeight);
 			window.draw(verticalDividerRect);
+
+			button1.draw(window);
+			button2.draw(window);
 
 			window.display();
 		}

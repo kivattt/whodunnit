@@ -7,6 +7,18 @@
 
 using std::string;
 
+template <typename T>
+bool within(T n, T min, T max) {
+	if (n < min) {
+		return false;
+	}
+	if (n > max) {
+		return false;
+	}
+
+	return true;
+}
+
 string sanitize_shell_argument(const string &input){
 	string octal = "";
 
