@@ -17,7 +17,7 @@ class Button{
 	// TODO: Make this a rounded rectangle, see:
 	// https://github.com/SFML/SFML/wiki/Source%3A-Draw-Rounded-Rectangle/_edit
 	sf::RectangleShape backgroundRect;
-	bool backgroundRectVisible = false;
+	bool hovered = false;
 	bool pressed = false;
 
 	std::function<void()> onClickFunction;
@@ -53,15 +53,15 @@ class Button{
 	void update(sf::Event event) {
 		switch (event.type) {
 			case sf::Event::MouseMoved:
-				backgroundRectVisible = within((float)event.mouseMove.x, x, x+width) && within((float)event.mouseMove.y, y, y+height);
+				hovered = within((float)event.mouseMove.x, x, x+width) && within((float)event.mouseMove.y, y, y+height);
 				break;
 			case sf::Event::MouseButtonPressed:
-				backgroundRectVisible = within((float)event.mouseButton.x, x, x+width) && within((float)event.mouseButton.y, y, y+height);
-				pressed = backgroundRectVisible;
+				hovered = within((float)event.mouseButton.x, x, x+width) && within((float)event.mouseButton.y, y, y+height);
+				pressed = hovered;
 				break;
 			case sf::Event::MouseButtonReleased:
-				backgroundRectVisible = within((float)event.mouseButton.x, x, x+width) && within((float)event.mouseButton.y, y, y+height);
-				if (!backgroundRectVisible) {
+				hovered = within((float)event.mouseButton.x, x, x+width) && within((float)event.mouseButton.y, y, y+height);
+				if (!hovered) {
 					pressed = false;
 					break;
 				}
@@ -80,7 +80,8 @@ class Button{
 		} else {
 			backgroundRect.setFillColor(sf::Color(100,100,100));
 		}
-		if (backgroundRectVisible) {
+
+		if (hovered) {
 			window.draw(backgroundRect);
 		}
 
