@@ -71,6 +71,10 @@ class Button{
 					onClickFunction();
 				}
 				break;
+			case sf::Event::LostFocus:
+				hovered = false;
+				pressed = false;
+				break;
 		}
 	}
 

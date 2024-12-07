@@ -204,6 +204,8 @@ class WhoDunnit{
 			std::cout << "button2 clicked!" << std::endl;
 		});
 
+		int topbarHeight = 35;
+
 		while (window.isOpen()) {
 			sf::Event event;
 			while (window.pollEvent(event)) {
@@ -268,7 +270,7 @@ class WhoDunnit{
 							break;
 						}
 
-						if (within(event.mouseButton.x, verticalDividerX-15, verticalDividerX+15)) {
+						if (event.mouseButton.y > topbarHeight && within(event.mouseButton.x, verticalDividerX-15, verticalDividerX+15)) {
 							movingVerticalDivider = true;
 						}
 						break;
@@ -278,7 +280,7 @@ class WhoDunnit{
 						}
 						break;
 					case sf::Event::MouseMoved:
-						if (movingVerticalDivider || within(event.mouseMove.x, verticalDividerX-15, verticalDividerX+15)) {
+						if (movingVerticalDivider || (event.mouseMove.y > topbarHeight && within(event.mouseMove.x, verticalDividerX-15, verticalDividerX+15))) {
 							verticalDividerRect.setFillColor(sf::Color(220,220,220));
 						} else {
 							verticalDividerRect.setFillColor(sf::Color(100,100,100));
@@ -297,7 +299,6 @@ class WhoDunnit{
 
 			window.clear(sf::Color(10,10,10));
 
-			int topbarHeight = 35;
 			button1.set_size(topbarHeight, topbarHeight);
 			button2.set_size(topbarHeight, topbarHeight);
 
