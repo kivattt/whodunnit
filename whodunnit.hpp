@@ -2,6 +2,7 @@
 #define WHODUNNIT_HPP
 
 #include <iostream>
+#include <sstream>
 #include <fstream>
 #include <chrono>
 #include <climits>
@@ -29,7 +30,7 @@ using std::vector;
 sf::Font theFont;
 int fontSizePixels = 15;
 
-struct BlameLine{
+struct BlameLine {
 	string commitHash;
 	string author;
 
@@ -38,12 +39,22 @@ struct BlameLine{
 	string line;
 };
 
-struct BlameFile{
+struct Commit {
+	string author;
+	string time;
+	string commitHash;
+	string title;
+};
+
+struct BlameFile {
 	vector<BlameLine> blameLines;
+	vector<Commit> commitLog;
 	unsigned long long oldestCommitterTime = ULLONG_MAX;
 	unsigned long long newestCommitterTime = 0;
 	string oldestCommitHash = "";
 	string newestCommitHash = "";
+
+	vector<string> ignoreRevsList;
 
 	double committer_time_0_to_1(unsigned long long committerTime) {
 		double zeroToOne = double(committerTime - oldestCommitterTime) / double(newestCommitterTime - oldestCommitterTime);
@@ -88,13 +99,74 @@ struct BlameFile{
 class WhoDunnit{
 	public:
 
-	vector<string> ignoreRevsList;
-
 	int verticalDividerX = 190;
 	bool movingVerticalDivider = false;
 
+	std::optional<vector<Commit>> run_git_log(string filename) {
+		char tempFilename[] = "/tmp/whodunnit-XXXXXX";
+		int fd = mkstemp(tempFilename);
+		if (fd == -1) {
+			return std::nullopt;
+		}
+		close(fd);
+
+		char *previousDirName = get_current_dir_name();
+		if (chdir(parent_dir(filename).c_str()) == -1) {
+			free(previousDirName);
+			return std::nullopt;
+		}
+
+		int exitCode = system(string("git log --pretty=format:\"%an%n%at %H %s\" " + sanitize_shell_argument(filename) + " > " + tempFilename).c_str());
+		if (exitCode != 0) {
+			free(previousDirName);
+			return std::nullopt;
+		}
+
+		if (chdir(previousDirName) == -1) {
+			free(previousDirName);
+			return std::nullopt;
+		}
+
+		vector<Commit> ret;
+
+		std::ifstream file(tempFilename);
+		unsigned long long lineNum = 0;
+		bool lookingForAuthor = true;
+
+		Commit currentCommit;
+		for (string line; std::getline(file, line); ++lineNum) {
+			//std::cout << line << std::endl;
+			if (line.empty()) {
+				continue;
+			}
+
+			if (lookingForAuthor) {
+				currentCommit.author = line;
+			} else {
+				std::stringstream stream(line);
+				stream >> currentCommit.time;
+				stream >> currentCommit.commitHash;
+
+				std::stringstream rest;
+				rest << stream.rdbuf();
+				currentCommit.title = rest.str().substr(1);
+
+				ret.push_back(currentCommit);
+				currentCommit = Commit();
+			}
+
+			lookingForAuthor = !lookingForAuthor;
+		}
+
+		// Delete the temp file
+		unlink(tempFilename);
+
+		free(previousDirName);
+		return ret;
+	}
+
 	// Ignores commit hashes from the ignoreRevsList
-	std::optional<BlameFile> run_git_blame(string filename) {
+	std::optional<BlameFile> run_git_blame(string filename, const vector<string> &ignoreRevsList) {
 		auto start = std::chrono::high_resolution_clock::now();
 
 		char tempFilename[] = "/tmp/whodunnit-XXXXXX";
@@ -113,7 +185,7 @@ class WhoDunnit{
 		close(ignoreRevsFd);
 
 		std::ofstream ignoreRevsFile(tempIgnoreRevsFilename, std::ofstream::out | std::ofstream::trunc);
-		for (string revision : ignoreRevsList) {
+		for (const string &revision : ignoreRevsList) {
 			ignoreRevsFile << revision << '\n';
 		}
 		ignoreRevsFile.close();
@@ -140,6 +212,7 @@ class WhoDunnit{
 		}
 
 		BlameFile ret;
+		ret.ignoreRevsList = ignoreRevsList;
 
 		std::ifstream file(tempFilename);
 
@@ -156,6 +229,7 @@ class WhoDunnit{
 				size_t firstSpace = line.find_first_of(' ');
 				if (firstSpace == string::npos) {
 					currentBlameLine.commitHash = line;
+					std::cerr << "Unexpected git blame --line-porcelain output" << std::endl;
 				} else {
 					currentBlameLine.commitHash = line.substr(0, firstSpace);
 				}
@@ -186,12 +260,23 @@ class WhoDunnit{
 				} catch(std::invalid_argument &e) {
 					continue;
 				}
-				ret.oldestCommitterTime = std::min(time, ret.oldestCommitterTime);
-				ret.newestCommitterTime = std::max(time, ret.newestCommitterTime);
+
+				if (time < ret.oldestCommitterTime) {
+					ret.oldestCommitterTime = time;
+					ret.oldestCommitHash = currentBlameLine.commitHash;
+				}
+
+				if (time > ret.newestCommitterTime) {
+					ret.newestCommitterTime = time;
+					ret.newestCommitHash = currentBlameLine.commitHash;
+				}
+
 				currentBlameLine.committerTime = time;
 				continue;
 			}
 		}
+
+		std::cout << "newest: " << ret.newestCommitHash << '\n';
 
 		// Delete the temp file
 		unlink(tempFilename);
@@ -205,7 +290,13 @@ class WhoDunnit{
 	}
 
 	int run(string filename) {
-		std::optional<BlameFile> blameFile = run_git_blame(filename);
+		std::optional<vector<Commit>> gitLog = run_git_log(filename);
+		if (! gitLog) {
+			std::cerr << "Failed to run git log\n";
+			return 1;
+		}
+
+		std::optional<BlameFile> blameFile = run_git_blame(filename, {});
 		if (! blameFile) {
 			std::cerr << "Failed to run git blame\n";
 			return 1;
@@ -217,6 +308,11 @@ class WhoDunnit{
 		}
 
 		BlameFile theFile = blameFile.value();
+		theFile.commitLog = gitLog.value();
+
+		for (Commit &c : theFile.commitLog) {
+			std::cout << c.time << ' ' << c.author << ' ' << c.commitHash << ' ' << c.title << '\n';
+		}
 
 		sf::RenderWindow window(sf::VideoMode(START_WIDTH, START_HEIGHT), "whodunnit - " + basename(filename));
 		window.setVerticalSyncEnabled(true);
@@ -229,14 +325,33 @@ class WhoDunnit{
 		topbarRect.setSize(sf::Vector2f(window.getSize().x, topbarHeight));
 		topbarRect.setFillColor(sf::Color(160,160,160));*/
 
+		auto updateGitBlame = [&]() {
+			std::optional<BlameFile> blameFile = run_git_blame(filename, theFile.ignoreRevsList);
+			if (! blameFile) {
+				std::cerr << "Failed to run git blame\n";
+				return;
+			}
+			theFile = blameFile.value();
+			theFile.commitLog = gitLog.value();
+		};
+
 		Button button1({0,0}, {40,40}, theFont, "<");
-		button1.set_on_click([](){
-			std::cout << "button1 clicked!" << std::endl;
+		button1.set_on_click([&](){
+			theFile.ignoreRevsList.push_back(theFile.newestCommitHash);
+			/*for (auto &e : theFile.ignoreRevsList) {
+				std::cout << "ignore: " << e << '\n';
+			}*/
+			updateGitBlame();
 		});
 
 		Button button2({40,0}, {40,40}, theFont, ">");
-		button2.set_on_click([](){
-			std::cout << "button2 clicked!" << std::endl;
+		button2.set_on_click([&](){
+			if (theFile.ignoreRevsList.size() == 0) {
+				return;
+			}
+
+			theFile.ignoreRevsList.pop_back();
+			updateGitBlame();
 		});
 
 		int topbarHeight = 35;
@@ -350,6 +465,9 @@ class WhoDunnit{
 				theFile.blameBgs[i].setPosition(0, y - yOffset);
 				window.draw(theFile.blameBgs[i]);
 
+				theFile.authorLines[i].setPosition(0, y - yOffset);
+				window.draw(theFile.authorLines[i]);
+
 				sf::RectangleShape rect;
 				rect.setSize(sf::Vector2f(window.getSize().x, step));
 				rect.setPosition(verticalDividerX+2, y - yOffset);
@@ -359,9 +477,6 @@ class WhoDunnit{
 				c.b /= 5;
 				rect.setFillColor(c);
 				window.draw(rect);
-
-				theFile.authorLines[i].setPosition(0, y - yOffset);
-				window.draw(theFile.authorLines[i]);
 
 				theFile.textLines[i].setPosition(verticalDividerX+10, y - yOffset);
 				window.draw(theFile.textLines[i]);
