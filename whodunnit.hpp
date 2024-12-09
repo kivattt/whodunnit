@@ -67,6 +67,10 @@ struct BlameFile {
 	vector<sf::RectangleShape> blameBgs;
 
 	void set_texts() {
+		textLines.clear();
+		authorLines.clear();
+		blameBgs.clear();
+
 		for (BlameLine &e : blameLines) {
 			sf::Text text;
 			text.setFont(theFont);
@@ -407,6 +411,7 @@ class WhoDunnit{
 						// Zooming
 						// TODO: Make it logarithmic or whatever so the zoom feels intuitive
 						fontSizePixels = std::max(1, int(fontSizePixels + event.mouseWheelScroll.delta));
+						fontSizePixels = std::min(100, fontSizePixels); // Going higher will use ridiculous amounts of memory
 
 						for (sf::Text &text : theFile.textLines) {
 							text.setCharacterSize(fontSizePixels);
