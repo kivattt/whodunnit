@@ -80,7 +80,7 @@ struct BlameFile {
 			textLines.push_back(text);
 
 			text.setFont(theFont);
-			text.setString(e.author);
+			text.setString(sf::String::fromUtf8(e.author.begin(), e.author.end()));
 			text.setCharacterSize(fontSizePixels);
 
 			//text.setFillColor(sf::Color(color, color/1.5, color/1.5));
