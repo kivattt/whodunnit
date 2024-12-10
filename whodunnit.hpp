@@ -94,7 +94,7 @@ struct BlameFile {
 
 			//text.setFillColor(sf::Color(color, color/1.5, color/1.5));
 			if (e.commitHash == newestCommitHash) {
-				text.setFillColor(sf::Color(40,40,40));
+				text.setFillColor(sf::Color(30,30,30));
 			} else {
 				text.setFillColor(sf::Color(200,200,200));
 			}
@@ -107,7 +107,7 @@ struct BlameFile {
 			//rect.setFillColor(sf::Color(color, color/1.5, color/1.5));
 			//int randomHue = rand() / double(RAND_MAX) * 360;
 			if (e.commitHash == newestCommitHash) {
-				rect.setFillColor(hsv_to_rgb(130, 0.65, 1 - 0.3));
+				rect.setFillColor(hsv_to_rgb(130, 0.50, 1 - 0.3));
 			} else {
 				double zeroToOne = committer_time_0_to_1(e.committerTime);
 				rect.setFillColor(hsv_to_rgb(221, zeroToOne*0.65, 0.7d * (0.3 + zeroToOne * (1 - 0.3))));
@@ -122,10 +122,11 @@ struct BlameFile {
 			thing.commitHashText.setFont(theFont);
 			thing.titleText.setFont(theFont);
 
-			thing.authorText.setCharacterSize(fontSizePixels);
-			thing.timeText.setCharacterSize(fontSizePixels);
-			thing.commitHashText.setCharacterSize(fontSizePixels);
-			thing.titleText.setCharacterSize(fontSizePixels);
+			int size = std::max(1, fontSizePixels-2);
+			thing.authorText.setCharacterSize(size);
+			thing.timeText.setCharacterSize(size);
+			thing.commitHashText.setCharacterSize(size);
+			thing.titleText.setCharacterSize(size);
 
 			thing.authorText.setFillColor(sf::Color(200,200,200));
 			thing.timeText.setFillColor(sf::Color(200,200,200));
@@ -589,12 +590,12 @@ class WhoDunnit{
 			window.draw(gitLogBGRect);
 			for (int i = 0; i < theFile.commitTexts.size(); i++) {
 				auto &e = theFile.commitTexts[i];
-				float x = rightDividerX;
-				float y = topbarHeight + i * (step-4);
+				float x = rightDividerX+5;
+				float y = topbarHeight + i * fontSizePixels;
 				e.timeText.setPosition(x,y);
 				e.authorText.setPosition(x+100,y);
 				e.commitHashText.setPosition(x,y);
-				e.titleText.setPosition(x+300,y);
+				e.titleText.setPosition(x+220,y);
 
 				window.draw(e.authorText);
 				window.draw(e.timeText);
