@@ -46,9 +46,17 @@ struct Commit {
 	string title;
 };
 
+struct CommitThing {
+	sf::Text authorText;
+	sf::Text timeText;
+	sf::Text commitHashText;
+	sf::Text titleText;
+};
+
 struct BlameFile {
 	vector<BlameLine> blameLines;
 	vector<Commit> commitLog;
+	vector<CommitThing> commitTexts;
 	unsigned long long oldestCommitterTime = ULLONG_MAX;
 	unsigned long long newestCommitterTime = 0;
 	string oldestCommitHash = "";
@@ -70,6 +78,7 @@ struct BlameFile {
 		textLines.clear();
 		authorLines.clear();
 		blameBgs.clear();
+		commitTexts.clear();
 
 		for (BlameLine &e : blameLines) {
 			sf::Text text;
@@ -97,14 +106,35 @@ struct BlameFile {
 			rect.setFillColor(hsv_to_rgb(221, zeroToOne*0.65, 0.7d * (0.3 + zeroToOne * (1 - 0.3))));
 			blameBgs.push_back(rect);
 		}
+
+		for (Commit &c : commitLog) {
+			CommitThing thing;
+			thing.authorText.setFont(theFont);
+			thing.timeText.setFont(theFont);
+			thing.commitHashText.setFont(theFont);
+			thing.titleText.setFont(theFont);
+
+			thing.authorText.setCharacterSize(fontSizePixels);
+			thing.timeText.setCharacterSize(fontSizePixels);
+			thing.commitHashText.setCharacterSize(fontSizePixels);
+			thing.titleText.setCharacterSize(fontSizePixels);
+
+			thing.authorText.setString(sf::String::fromUtf8(c.author.begin(), c.author.end()));
+			thing.timeText.setString(c.time);
+			thing.commitHashText.setString(c.commitHash);
+			thing.titleText.setString(sf::String::fromUtf8(c.title.begin(), c.title.end()));
+
+			commitTexts.push_back(thing);
+		}
 	}
 };
 
 class WhoDunnit{
 	public:
 
-	int verticalDividerX = 190;
-	bool movingVerticalDivider = false;
+	int leftDividerX = 190;
+	int rightDividerX = START_WIDTH - 250;
+	bool movingLeftDivider = false;
 
 	void zoom(int level, BlameFile &theFile) {
 		// TODO: Make it logarithmic or whatever so the zoom feels intuitive
@@ -133,7 +163,8 @@ class WhoDunnit{
 			return std::nullopt;
 		}
 
-		int exitCode = system(string("git log --pretty=format:\"%an%n%at %H %s\" " + sanitize_shell_argument(filename) + " > " + tempFilename).c_str());
+		//int exitCode = system(string("git log --pretty=format:\"%an%n%at %H %s\" " + sanitize_shell_argument(filename) + " > " + tempFilename).c_str());
+		int exitCode = system(string("git log --pretty=format:\"%an%n%as %H %s\" " + sanitize_shell_argument(filename) + " > " + tempFilename).c_str());
 		if (exitCode != 0) {
 			free(previousDirName);
 			return std::nullopt;
@@ -312,7 +343,6 @@ class WhoDunnit{
 			std::cerr << "Failed to run git log\n";
 			return 1;
 		}
-
 		std::optional<BlameFile> blameFile = run_git_blame(filename, {});
 		if (! blameFile) {
 			std::cerr << "Failed to run git blame\n";
@@ -326,6 +356,7 @@ class WhoDunnit{
 
 		BlameFile theFile = blameFile.value();
 		theFile.commitLog = gitLog.value();
+		theFile.set_texts();
 
 		for (Commit &c : theFile.commitLog) {
 			std::cout << c.time << ' ' << c.author << ' ' << c.commitHash << ' ' << c.title << '\n';
@@ -350,11 +381,13 @@ class WhoDunnit{
 			}
 			theFile = blameFile.value();
 			theFile.commitLog = gitLog.value();
+			theFile.set_texts();
 		};
 
 		int topbarHeight = 35;
 
-		Button button1({0,0}, {topbarHeight,topbarHeight}, theFont, "<");
+		float h = topbarHeight;
+		Button button1({0,0}, {h,h}, theFont, "<");
 		button1.set_on_click([&](){
 			theFile.ignoreRevsList.push_back(theFile.newestCommitHash);
 			/*for (auto &e : theFile.ignoreRevsList) {
@@ -363,7 +396,7 @@ class WhoDunnit{
 			updateGitBlame();
 		});
 
-		Button button2({topbarHeight,0}, {topbarHeight,topbarHeight}, theFont, ">");
+		Button button2({h,0}, {h,h}, theFont, ">");
 		button2.set_on_click([&](){
 			if (theFile.ignoreRevsList.size() == 0) {
 				return;
@@ -390,8 +423,8 @@ class WhoDunnit{
 							sf::FloatRect visibleArea(0.0f, 0.0f, event.size.width, event.size.height);
 							window.setView(sf::View(visibleArea));
 
-							verticalDividerX = std::min(std::max(0, int(window.getSize().x) - VERT_DIVIDER_FROM_RIGHT), verticalDividerX);
-							verticalDividerX = std::max(VERT_DIVIDER_FROM_LEFT, verticalDividerX);
+							leftDividerX = std::min(std::max(0, int(window.getSize().x) - VERT_DIVIDER_FROM_RIGHT), leftDividerX);
+							leftDividerX = std::max(VERT_DIVIDER_FROM_LEFT, leftDividerX);
 						}
 						break;
 					case sf::Event::KeyPressed:
@@ -442,27 +475,27 @@ class WhoDunnit{
 							break;
 						}
 
-						if (event.mouseButton.y > topbarHeight && within(event.mouseButton.x, verticalDividerX-15, verticalDividerX+15)) {
-							movingVerticalDivider = true;
+						if (event.mouseButton.y > topbarHeight && within(event.mouseButton.x, leftDividerX-15, leftDividerX+15)) {
+							movingLeftDivider = true;
 						}
 						break;
 					case sf::Event::MouseButtonReleased:
 						if (event.mouseButton.button == sf::Mouse::Left) {
-							movingVerticalDivider = false;
+							movingLeftDivider = false;
 						}
 						break;
 					case sf::Event::MouseMoved:
-						if (movingVerticalDivider || (event.mouseMove.y > topbarHeight && within(event.mouseMove.x, verticalDividerX-15, verticalDividerX+15))) {
+						if (movingLeftDivider || (event.mouseMove.y > topbarHeight && within(event.mouseMove.x, leftDividerX-15, leftDividerX+15))) {
 							verticalDividerRect.setFillColor(sf::Color(220,220,220));
 						} else {
 							verticalDividerRect.setFillColor(sf::Color(100,100,100));
 						}
-						if (! movingVerticalDivider) {
+						if (! movingLeftDivider) {
 							break;
 						}
 
-						verticalDividerX = std::max(VERT_DIVIDER_FROM_LEFT, event.mouseMove.x);
-						verticalDividerX = std::min(verticalDividerX, std::max(0, int(window.getSize().x) - VERT_DIVIDER_FROM_RIGHT));
+						leftDividerX = std::max(VERT_DIVIDER_FROM_LEFT, event.mouseMove.x);
+						leftDividerX = std::min(leftDividerX, std::max(0, int(window.getSize().x) - VERT_DIVIDER_FROM_RIGHT));
 						break;
 					default:
 						break;
@@ -483,7 +516,7 @@ class WhoDunnit{
 				int iFromZero = i - startIdx;
 				float y = iFromZero * step;
 
-				theFile.blameBgs[i].setSize(sf::Vector2f(verticalDividerX, step));
+				theFile.blameBgs[i].setSize(sf::Vector2f(leftDividerX, step));
 				theFile.blameBgs[i].setPosition(0, y - yOffset);
 				window.draw(theFile.blameBgs[i]);
 
@@ -492,7 +525,7 @@ class WhoDunnit{
 
 				sf::RectangleShape rect;
 				rect.setSize(sf::Vector2f(window.getSize().x, step));
-				rect.setPosition(verticalDividerX+2, y - yOffset);
+				rect.setPosition(leftDividerX+2, y - yOffset);
 				sf::Color c = theFile.blameBgs[i].getFillColor();
 				c.r /= 5;
 				c.g /= 5;
@@ -500,12 +533,27 @@ class WhoDunnit{
 				rect.setFillColor(c);
 				window.draw(rect);
 
-				theFile.textLines[i].setPosition(verticalDividerX+10, y - yOffset);
+				theFile.textLines[i].setPosition(leftDividerX+10, y - yOffset);
 				window.draw(theFile.textLines[i]);
 
 				if (y + step > window.getSize().y) {
 					break;
 				}
+			}
+
+			for (int i = 0; i < theFile.commitTexts.size(); i++) {
+				auto &e = theFile.commitTexts[i];
+				float x = rightDividerX;
+				float y = i * (step-4);
+				e.timeText.setPosition(x,y);
+				e.authorText.setPosition(x+100,y);
+				e.commitHashText.setPosition(x,y);
+				e.titleText.setPosition(x+300,y);
+
+				window.draw(e.authorText);
+				window.draw(e.timeText);
+				//window.draw(e.commitHashText);
+				window.draw(e.titleText);
 			}
 
 			sf::VertexArray topbarRect(sf::TriangleStrip, 4);
@@ -522,7 +570,7 @@ class WhoDunnit{
 			window.draw(topbarRect);
 
 			verticalDividerRect.setSize(sf::Vector2f(2, window.getSize().y));
-			verticalDividerRect.setPosition(verticalDividerX, topbarHeight);
+			verticalDividerRect.setPosition(leftDividerX, topbarHeight);
 			window.draw(verticalDividerRect);
 
 			button1.draw(window);

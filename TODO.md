@@ -1,6 +1,9 @@
 - Line numbers
 - File picker on the right?
 
+- Author name text alignment (it is slightly too high up)
+- Smooth scrolling, better scrolling, mouse-acceleration style scrolling
+
 - Look into the `git blame --incremental` flag
 
 - Don't use system()
