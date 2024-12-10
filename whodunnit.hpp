@@ -63,8 +63,6 @@ struct BlameFile {
 	string oldestCommitHash = "";
 	string newestCommitHash = "";
 
-	vector<string> ignoreRevsList;
-
 	double committer_time_0_to_1(unsigned long long committerTime) {
 		double zeroToOne = double(committerTime - oldestCommitterTime) / double(newestCommitterTime - oldestCommitterTime);
 		return zeroToOne;
@@ -122,23 +120,26 @@ struct BlameFile {
 			blameBgs.push_back(rect);
 		}
 
+		int i = 0;
 		for (Commit &c : commitLog) {
+			++i;
 			CommitThing thing;
 			thing.authorText.setFont(theFont);
 			thing.timeText.setFont(theFont);
 			thing.commitHashText.setFont(theFont);
 			thing.titleText.setFont(theFont);
 
-			int size = std::max(1, fontSizePixels-2);
+			int size = std::max(1, fontSizePixels-1);
 			thing.authorText.setCharacterSize(size);
 			thing.timeText.setCharacterSize(size);
 			thing.commitHashText.setCharacterSize(size);
 			thing.titleText.setCharacterSize(size);
 
-			thing.authorText.setFillColor(sf::Color(200,200,200));
-			thing.timeText.setFillColor(sf::Color(200,200,200));
-			thing.commitHashText.setFillColor(sf::Color(200,200,200));
-			thing.titleText.setFillColor(sf::Color(200,200,200));
+			sf::Color textColor = commitsInBlame.contains(c.commitHash) ? gitLogTextColor : gitLogTextColorDarker;
+			thing.authorText.setFillColor(textColor);
+			thing.timeText.setFillColor(textColor);
+			thing.commitHashText.setFillColor(textColor);
+			thing.titleText.setFillColor(textColor);
 
 			thing.authorText.setString(sf::String::fromUtf8(c.author.begin(), c.author.end()));
 			thing.timeText.setString(c.time);
@@ -148,73 +149,40 @@ struct BlameFile {
 			commitTexts.push_back(thing);
 
 			sf::RectangleShape rect;
-			if (commitsInBlame.contains(c.commitHash)) {
-				rect.setFillColor(gitLogBackgroundColor);
-			} else {
-				rect.setFillColor(gitLogBackgroundColorRed);
-			}
+			rect.setFillColor(gitLogBackgroundColor);
+			rect.setFillColor(i & 1 ? gitLogBackgroundColor : gitLogBackgroundColorAlternate);
 			gitLogBgs.push_back(rect);
 		}
 	}
-};
 
-class WhoDunnit{
-	public:
-
-	int leftDividerX = 190;
-	int rightDividerX = START_WIDTH - 400;
-	bool movingLeftDivider = false;
-	bool movingRightDivider = false;
-
-	void zoom(int level, BlameFile &theFile) {
-		// TODO: Make it logarithmic or whatever so the zoom feels intuitive
-		fontSizePixels = std::max(1, level);
-		fontSizePixels = std::min(100, fontSizePixels); // Going higher will use ridiculous amounts of memory
-
-		for (sf::Text &text : theFile.textLines) {
-			text.setCharacterSize(fontSizePixels);
-		}
-		for (sf::Text &text : theFile.authorLines) {
-			text.setCharacterSize(fontSizePixels);
-		}
-
-		int size = std::max(1, fontSizePixels-2);
-		// TODO: Maybe make separate zoom for git log
-		for (CommitThing &c : theFile.commitTexts) {
-			c.authorText.setCharacterSize(size);
-			c.timeText.setCharacterSize(size);
-			c.commitHashText.setCharacterSize(size);
-			c.titleText.setCharacterSize(size);
-		}
-	}
-
-	std::optional<vector<Commit>> run_git_log(string filename) {
+	// Returns false on failure
+	bool run_git_log(string filename) {
 		char tempFilename[] = "/tmp/whodunnit-XXXXXX";
 		int fd = mkstemp(tempFilename);
 		if (fd == -1) {
-			return std::nullopt;
+			return false;
 		}
 		close(fd);
 
 		char *previousDirName = get_current_dir_name();
 		if (chdir(parent_dir(filename).c_str()) == -1) {
 			free(previousDirName);
-			return std::nullopt;
+			return false;
 		}
 
 		//int exitCode = system(string("git log --pretty=format:\"%an%n%at %H %s\" " + sanitize_shell_argument(filename) + " > " + tempFilename).c_str());
 		int exitCode = system(string("git log --pretty=format:\"%an%n%as %H %s\" " + sanitize_shell_argument(filename) + " > " + tempFilename).c_str());
 		if (exitCode != 0) {
 			free(previousDirName);
-			return std::nullopt;
+			return false;
 		}
 
 		if (chdir(previousDirName) == -1) {
 			free(previousDirName);
-			return std::nullopt;
+			return false;
 		}
 
-		vector<Commit> ret;
+		commitLog.clear();
 
 		std::ifstream file(tempFilename);
 		unsigned long long lineNum = 0;
@@ -238,7 +206,7 @@ class WhoDunnit{
 				rest << stream.rdbuf();
 				currentCommit.title = rest.str().substr(1);
 
-				ret.push_back(currentCommit);
+				commitLog.push_back(currentCommit);
 				currentCommit = Commit();
 			}
 
@@ -249,44 +217,47 @@ class WhoDunnit{
 		unlink(tempFilename);
 
 		free(previousDirName);
-		return ret;
+		return true;
 	}
 
-	// Ignores commit hashes from the ignoreRevsList
-	std::optional<BlameFile> run_git_blame(string filename, const vector<string> &ignoreRevsList) {
+
+	// Run git blame on filename, with known revisions from commitLog
+	// Returns false on failure
+	bool run_git_blame(string filename) {
 		auto start = std::chrono::high_resolution_clock::now();
 
 		char tempFilename[] = "/tmp/whodunnit-XXXXXX";
 		int fd = mkstemp(tempFilename);
 		if (fd == -1) {
-			return std::nullopt;
+			return false;
 		}
 		close(fd);
 
-		// Temporary file for --ignore-revs-file
-		char tempIgnoreRevsFilename[] = "/tmp/whodunnit-i-XXXXXX";
-		int ignoreRevsFd = mkstemp(tempIgnoreRevsFilename);
-		if (ignoreRevsFd == -1) {
-			return std::nullopt;
+		// Temporary file for -S <revs-file>
+		char tempRevsFilename[] = "/tmp/whodunnit-r-XXXXXX";
+		int revsFd = mkstemp(tempRevsFilename);
+		if (revsFd == -1) {
+			return false;
 		}
-		close(ignoreRevsFd);
+		close(revsFd);
 
-		std::ofstream ignoreRevsFile(tempIgnoreRevsFilename, std::ofstream::out | std::ofstream::trunc);
-		for (const string &revision : ignoreRevsList) {
-			ignoreRevsFile << revision << '\n';
+		std::ofstream revsFile(tempRevsFilename, std::ofstream::out | std::ofstream::trunc);
+		for (const Commit &c : commitLog) {
+			revsFile << c.commitHash << '\n';
 		}
-		ignoreRevsFile.close();
+		revsFile.close();
 
 		char *previousDirName = get_current_dir_name();
 		if (chdir(parent_dir(filename).c_str()) == -1) {
 			free(previousDirName);
-			return std::nullopt;
+			return false;
 		}
 
-		int exitCode = system(string("git blame --line-porcelain -t --ignore-revs-file " + string(tempIgnoreRevsFilename) + " " + sanitize_shell_argument(filename) + " > " + tempFilename).c_str());
+		//int exitCode = system(string("git blame --line-porcelain -t -S " + string(tempRevsFilename) + " " + sanitize_shell_argument(filename) + " > " + tempFilename).c_str());
+		int exitCode = system(string("git blame --line-porcelain -t " + sanitize_shell_argument(filename) + " > " + tempFilename).c_str());
 		if (exitCode != 0) {
 			free(previousDirName);
-			return std::nullopt;
+			return false;
 		}
 
 		auto end = std::chrono::high_resolution_clock::now();
@@ -295,13 +266,14 @@ class WhoDunnit{
 
 		if (chdir(previousDirName) == -1) {
 			free(previousDirName);
-			return std::nullopt;
+			return false;
 		}
 
-		BlameFile ret;
-		ret.ignoreRevsList = ignoreRevsList;
-
 		std::ifstream file(tempFilename);
+
+		blameLines.clear();
+		oldestCommitterTime = ULLONG_MAX;
+		newestCommitterTime = 0;
 
 		bool lookingForCommitHash = true;
 		unsigned long long lineNum = 0;
@@ -327,7 +299,7 @@ class WhoDunnit{
 
 			if (line.front() == '\t') {
 				currentBlameLine.line = line.substr(1);
-				ret.blameLines.push_back(currentBlameLine);
+				blameLines.push_back(currentBlameLine);
 				currentBlameLine = BlameLine();
 
 				lookingForCommitHash = true;
@@ -348,14 +320,14 @@ class WhoDunnit{
 					continue;
 				}
 
-				if (time < ret.oldestCommitterTime) {
-					ret.oldestCommitterTime = time;
-					ret.oldestCommitHash = currentBlameLine.commitHash;
+				if (time < oldestCommitterTime) {
+					oldestCommitterTime = time;
+					oldestCommitHash = currentBlameLine.commitHash;
 				}
 
-				if (time > ret.newestCommitterTime) {
-					ret.newestCommitterTime = time;
-					ret.newestCommitHash = currentBlameLine.commitHash;
+				if (time > newestCommitterTime) {
+					newestCommitterTime = time;
+					newestCommitHash = currentBlameLine.commitHash;
 				}
 
 				currentBlameLine.committerTime = time;
@@ -363,38 +335,74 @@ class WhoDunnit{
 			}
 		}
 
-		std::cout << "newest: " << ret.newestCommitHash << '\n';
+		std::cout << "newest: " << newestCommitHash << '\n';
 
 		// Delete the temp file
 		unlink(tempFilename);
-		// Delete the temporary file for --ignore-revs-file
-		unlink(tempIgnoreRevsFilename);
+		// Delete the temporary file for -S <revs-file>
+		unlink(tempRevsFilename);
 
 		free(previousDirName);
 
-		ret.set_texts();
-		return ret;
+		set_texts();
+		return true;
+	}
+
+};
+
+class WhoDunnit{
+	public:
+
+	int leftDividerX = 190;
+	int rightDividerX = START_WIDTH - 400;
+	bool movingLeftDivider = false;
+	bool movingRightDivider = false;
+
+	void zoom(int level, BlameFile &theFile) {
+		// TODO: Make it logarithmic or whatever so the zoom feels intuitive
+		fontSizePixels = std::max(1, level);
+		fontSizePixels = std::min(100, fontSizePixels); // Going higher will use ridiculous amounts of memory
+
+		for (sf::Text &text : theFile.textLines) {
+			text.setCharacterSize(fontSizePixels);
+		}
+		for (sf::Text &text : theFile.authorLines) {
+			text.setCharacterSize(fontSizePixels);
+		}
+
+		int size = std::max(1, fontSizePixels-1);
+		// TODO: Maybe make separate zoom for git log
+		for (CommitThing &c : theFile.commitTexts) {
+			c.authorText.setCharacterSize(size);
+			c.timeText.setCharacterSize(size);
+			c.commitHashText.setCharacterSize(size);
+			c.titleText.setCharacterSize(size);
+		}
 	}
 
 	int run(string filename) {
-		std::optional<vector<Commit>> gitLog = run_git_log(filename);
-		if (! gitLog) {
+		BlameFile theFile;
+		if (! theFile.run_git_log(filename)) {
 			std::cerr << "Failed to run git log\n";
 			return 1;
 		}
-		std::optional<BlameFile> blameFile = run_git_blame(filename, {});
-		if (! blameFile) {
+
+		if (! theFile.run_git_blame(filename)) {
 			std::cerr << "Failed to run git blame\n";
 			return 1;
 		}
+		/*std::optional<BlameFile> blameFile = run_git_blame(filename, {});
+		if (! blameFile) {
+			std::cerr << "Failed to run git blame\n";
+			return 1;
+		}*/
 
 		if (! theFont.loadFromFile("fonts/JetBrainsMono-Regular.ttf")) {
 			std::cerr << "Failed to load font at fonts/JetBrainsMono-Regular.ttf";
 			return 1;
 		}
 
-		BlameFile theFile = blameFile.value();
-		theFile.commitLog = gitLog.value();
+		//BlameFile theFile = blameFile.value();
 		theFile.set_texts();
 
 		for (Commit &c : theFile.commitLog) {
@@ -416,16 +424,18 @@ class WhoDunnit{
 		topbarRect.setFillColor(sf::Color(160,160,160));*/
 
 		auto updateGitBlame = [&]() {
-			std::optional<BlameFile> blameFile = run_git_blame(filename, theFile.ignoreRevsList);
-			if (! blameFile) {
+			if (! theFile.run_git_blame(filename)) {
 				std::cerr << "Failed to run git blame\n";
 				return;
 			}
-			int lastScrollPositionPixels = theFile.scrollPositionPixels;
-
-			theFile = blameFile.value();
-			theFile.scrollPositionPixels = lastScrollPositionPixels;
-			theFile.commitLog = gitLog.value();
+			/*std::optional<BlameFile> blameFile = run_git_blame(filename, theFile.ignoreRevsList);
+			if (! blameFile) {
+				std::cerr << "Failed to run git blame\n";
+				return;
+			}*/
+			//int lastScrollPositionPixels = theFile.scrollPositionPixels;
+			//theFile = blameFile.value();
+			//theFile.scrollPositionPixels = lastScrollPositionPixels;
 			theFile.set_texts();
 		};
 
@@ -434,20 +444,11 @@ class WhoDunnit{
 		float h = topbarHeight;
 		Button button1({0,0}, {h,h}, theFont, "<");
 		button1.set_on_click([&](){
-			theFile.ignoreRevsList.push_back(theFile.newestCommitHash);
-			/*for (auto &e : theFile.ignoreRevsList) {
-				std::cout << "ignore: " << e << '\n';
-			}*/
 			updateGitBlame();
 		});
 
 		Button button2({h,0}, {h,h}, theFont, ">");
 		button2.set_on_click([&](){
-			if (theFile.ignoreRevsList.size() == 0) {
-				return;
-			}
-
-			theFile.ignoreRevsList.pop_back();
 			updateGitBlame();
 		});
 
@@ -610,12 +611,15 @@ class WhoDunnit{
 			gitLogBGRect.setSize(sf::Vector2f(window.getSize().x - rightDividerX, window.getSize().y));
 			gitLogBGRect.setFillColor(gitLogBackgroundColor);
 			window.draw(gitLogBGRect);
+			//float gitLogStep = fontSizePixels * 1.1;
+			int gitLogStep = (float)fontSizePixels * 1.3;
 			for (int i = 0; i < theFile.commitTexts.size(); i++) {
 				auto &e = theFile.commitTexts[i];
 				float x = rightDividerX+5;
-				float y = topbarHeight + i * fontSizePixels;
+				//float y = int(topbarHeight + i * gitLogStep);
+				float y = topbarHeight + i * gitLogStep;
 
-				theFile.gitLogBgs[i].setSize(sf::Vector2f(window.getSize().x - rightDividerX, fontSizePixels));
+				theFile.gitLogBgs[i].setSize(sf::Vector2f(window.getSize().x - rightDividerX, gitLogStep));
 				theFile.gitLogBgs[i].setPosition(rightDividerX, y);
 				window.draw(theFile.gitLogBgs[i]);
 

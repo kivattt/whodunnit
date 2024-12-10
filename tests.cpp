@@ -50,5 +50,5 @@ int main() {
 		}
 	}
 
-	std::cout << "\nTests succeeded" << std::endl;
+	std::cout << "\nTests succeeded!" << std::endl;
 }
