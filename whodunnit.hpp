@@ -74,7 +74,7 @@ struct BlameFile {
 		for (BlameLine &e : blameLines) {
 			sf::Text text;
 			text.setFont(theFont);
-			text.setString(e.line);
+			text.setString(sf::String::fromUtf8(e.line.begin(), e.line.end()));
 			text.setCharacterSize(fontSizePixels);
 			text.setFillColor(sf::Color(200,200,200));
 			textLines.push_back(text);
@@ -105,6 +105,19 @@ class WhoDunnit{
 
 	int verticalDividerX = 190;
 	bool movingVerticalDivider = false;
+
+	void zoom(int level, BlameFile &theFile) {
+		// TODO: Make it logarithmic or whatever so the zoom feels intuitive
+		fontSizePixels = std::max(1, level);
+		fontSizePixels = std::min(100, fontSizePixels); // Going higher will use ridiculous amounts of memory
+
+		for (sf::Text &text : theFile.textLines) {
+			text.setCharacterSize(fontSizePixels);
+		}
+		for (sf::Text &text : theFile.authorLines) {
+			text.setCharacterSize(fontSizePixels);
+		}
+	}
 
 	std::optional<vector<Commit>> run_git_log(string filename) {
 		char tempFilename[] = "/tmp/whodunnit-XXXXXX";
@@ -366,6 +379,8 @@ class WhoDunnit{
 				button1.update(event);
 				button2.update(event);
 
+				bool ctrlDown = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RControl);
+
 				switch (event.type) {
 					case sf::Event::Closed:
 						window.close();
@@ -386,14 +401,25 @@ class WhoDunnit{
 								window.close();
 								break;
 							case sf::Keyboard::Home:
-								if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RControl)) {
+								if (ctrlDown) {
 									theFile.scrollPositionPixels = 0;
 								}
 								break;
 							case sf::Keyboard::End:
-								if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RControl)) {
+								if (ctrlDown) {
 									float step = (fontSizePixels + fontSizePixels/2);
 									theFile.scrollPositionPixels = std::max(0, int(theFile.textLines.size() * step - window.getSize().y));
+								}
+								break;
+							case sf::Keyboard::Add: // The '+' key
+							case sf::Keyboard::Unknown: // My '+' key isn't recognized, and we don't have event.key.scancode in SFML 2.5.1
+								if (ctrlDown) {
+									zoom(fontSizePixels + 1, theFile);
+								}
+								break;
+							case sf::Keyboard::Hyphen: // The '-' key
+								if (ctrlDown) {
+									zoom(fontSizePixels - 1, theFile);
 								}
 								break;
 						}
@@ -409,16 +435,7 @@ class WhoDunnit{
 						}
 
 						// Zooming
-						// TODO: Make it logarithmic or whatever so the zoom feels intuitive
-						fontSizePixels = std::max(1, int(fontSizePixels + event.mouseWheelScroll.delta));
-						fontSizePixels = std::min(100, fontSizePixels); // Going higher will use ridiculous amounts of memory
-
-						for (sf::Text &text : theFile.textLines) {
-							text.setCharacterSize(fontSizePixels);
-						}
-						for (sf::Text &text : theFile.authorLines) {
-							text.setCharacterSize(fontSizePixels);
-						}
+						zoom(fontSizePixels + event.mouseWheelScroll.delta, theFile);
 						break;
 					case sf::Event::MouseButtonPressed:
 						if (event.mouseButton.button != sf::Mouse::Left) {
