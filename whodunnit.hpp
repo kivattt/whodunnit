@@ -518,26 +518,29 @@ class WhoDunnit{
 						}
 						break;
 					case sf::Event::MouseMoved:
-						if (movingLeftDivider || (event.mouseMove.y > topbarHeight && within(event.mouseMove.x, leftDividerX-15, leftDividerX+15))) {
-							leftDividerRect.setFillColor(sf::Color(220,220,220));
-						} else {
-							leftDividerRect.setFillColor(sf::Color(100,100,100));
-						}
+						leftDividerRect.setFillColor(sf::Color(100,100,100));
+						rightDividerRect.setFillColor(sf::Color(100,100,100));
 
-						if (movingRightDivider || (event.mouseMove.y > topbarHeight && within(event.mouseMove.x, rightDividerX-15, rightDividerX+15))) {
+						if (movingLeftDivider) {
+							leftDividerRect.setFillColor(sf::Color(220,220,220));
+						} else if (movingRightDivider) {
 							rightDividerRect.setFillColor(sf::Color(220,220,220));
 						} else {
-							rightDividerRect.setFillColor(sf::Color(100,100,100));
+							if (event.mouseMove.y > topbarHeight && within(event.mouseMove.x, leftDividerX-15, leftDividerX+15)) {
+								leftDividerRect.setFillColor(sf::Color(220,220,220));
+							} else if (event.mouseMove.y > topbarHeight && within(event.mouseMove.x, rightDividerX-15, rightDividerX+15)) {
+								rightDividerRect.setFillColor(sf::Color(220,220,220));
+							}
 						}
 
 						if (movingLeftDivider) {
 							leftDividerX = std::max(LEFT_DIVIDER_FROM_LEFT, event.mouseMove.x);
-							//leftDividerX = std::min(leftDividerX, std::max(0, int(window.getSize().x) - LEFT_DIVIDER_FROM_RIGHT));
 							leftDividerX = std::min(leftDividerX, rightDividerX - LEFT_DIVIDER_FROM_RIGHT);
 						} else if (movingRightDivider) {
 							rightDividerX = std::max(leftDividerX + LEFT_DIVIDER_FROM_LEFT, event.mouseMove.x);
 							rightDividerX = std::min(rightDividerX, std::max(0, int(window.getSize().x) - LEFT_DIVIDER_FROM_RIGHT));
 						}
+
 						break;
 					default:
 						break;
