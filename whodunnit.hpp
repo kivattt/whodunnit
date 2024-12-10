@@ -74,14 +74,20 @@ struct BlameFile {
 	vector<sf::Text> textLines;
 	vector<sf::Text> authorLines;
 	vector<sf::RectangleShape> blameBgs;
+	vector<sf::RectangleShape> gitLogBgs;
 
 	void set_texts() {
 		textLines.clear();
 		authorLines.clear();
 		blameBgs.clear();
 		commitTexts.clear();
+		gitLogBgs.clear();
+
+		std::map<string, bool> commitsInBlame;
 
 		for (BlameLine &e : blameLines) {
+			commitsInBlame[e.commitHash] = true;
+
 			sf::Text text;
 			text.setFont(theFont);
 			text.setString(sf::String::fromUtf8(e.line.begin(), e.line.end()));
@@ -140,6 +146,14 @@ struct BlameFile {
 			thing.titleText.setString(sf::String::fromUtf8(c.title.begin(), c.title.end()));
 
 			commitTexts.push_back(thing);
+
+			sf::RectangleShape rect;
+			if (commitsInBlame.contains(c.commitHash)) {
+				rect.setFillColor(gitLogBackgroundColor);
+			} else {
+				rect.setFillColor(gitLogBackgroundColorRed);
+			}
+			gitLogBgs.push_back(rect);
 		}
 	}
 };
@@ -164,12 +178,13 @@ class WhoDunnit{
 			text.setCharacterSize(fontSizePixels);
 		}
 
+		int size = std::max(1, fontSizePixels-2);
 		// TODO: Maybe make separate zoom for git log
 		for (CommitThing &c : theFile.commitTexts) {
-			c.authorText.setCharacterSize(fontSizePixels);
-			c.timeText.setCharacterSize(fontSizePixels);
-			c.commitHashText.setCharacterSize(fontSizePixels);
-			c.titleText.setCharacterSize(fontSizePixels);
+			c.authorText.setCharacterSize(size);
+			c.timeText.setCharacterSize(size);
+			c.commitHashText.setCharacterSize(size);
+			c.titleText.setCharacterSize(size);
 		}
 	}
 
@@ -406,7 +421,10 @@ class WhoDunnit{
 				std::cerr << "Failed to run git blame\n";
 				return;
 			}
+			int lastScrollPositionPixels = theFile.scrollPositionPixels;
+
 			theFile = blameFile.value();
+			theFile.scrollPositionPixels = lastScrollPositionPixels;
 			theFile.commitLog = gitLog.value();
 			theFile.set_texts();
 		};
@@ -590,12 +608,17 @@ class WhoDunnit{
 			sf::RectangleShape gitLogBGRect;
 			gitLogBGRect.setPosition(rightDividerX, 0);
 			gitLogBGRect.setSize(sf::Vector2f(window.getSize().x - rightDividerX, window.getSize().y));
-			gitLogBGRect.setFillColor(sf::Color(30,30,30));
+			gitLogBGRect.setFillColor(gitLogBackgroundColor);
 			window.draw(gitLogBGRect);
 			for (int i = 0; i < theFile.commitTexts.size(); i++) {
 				auto &e = theFile.commitTexts[i];
 				float x = rightDividerX+5;
 				float y = topbarHeight + i * fontSizePixels;
+
+				theFile.gitLogBgs[i].setSize(sf::Vector2f(window.getSize().x - rightDividerX, fontSizePixels));
+				theFile.gitLogBgs[i].setPosition(rightDividerX, y);
+				window.draw(theFile.gitLogBgs[i]);
+
 				e.timeText.setPosition(x,y);
 				e.authorText.setPosition(x+100,y);
 				e.commitHashText.setPosition(x,y);
@@ -618,7 +641,13 @@ class WhoDunnit{
 			topbarRect[1].color = sf::Color(10,10,10);
 			topbarRect[3].color = sf::Color(10,10,10);
 
+			sf::RectangleShape topbarDivider;
+			topbarDivider.setPosition(0,topbarHeight-1);
+			topbarDivider.setSize(sf::Vector2f(window.getSize().x, 1));
+			topbarDivider.setFillColor(dividerColor);
+
 			window.draw(topbarRect);
+			window.draw(topbarDivider);
 
 			leftDividerRect.setSize(sf::Vector2f(2, window.getSize().y));
 			leftDividerRect.setPosition(leftDividerX, topbarHeight);
