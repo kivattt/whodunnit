@@ -18,6 +18,7 @@
 
 #include "util.hpp"
 #include "button.hpp"
+#include "colors.hpp"
 
 #define START_WIDTH 1280
 #define START_HEIGHT 720
@@ -389,10 +390,10 @@ class WhoDunnit{
 		window.setVerticalSyncEnabled(true);
 
 		sf::RectangleShape leftDividerRect;
-		leftDividerRect.setFillColor(sf::Color(100,100,100));
+		leftDividerRect.setFillColor(dividerColor);
 
 		sf::RectangleShape rightDividerRect;
-		rightDividerRect.setFillColor(sf::Color(100,100,100));
+		rightDividerRect.setFillColor(dividerColor);
 
 		/*sf::RectangleShape topbarRect;
 		topbarRect.setPosition(0,0);
@@ -518,18 +519,18 @@ class WhoDunnit{
 						}
 						break;
 					case sf::Event::MouseMoved:
-						leftDividerRect.setFillColor(sf::Color(100,100,100));
-						rightDividerRect.setFillColor(sf::Color(100,100,100));
+						leftDividerRect.setFillColor(dividerColor);
+						rightDividerRect.setFillColor(dividerColor);
 
 						if (movingLeftDivider) {
-							leftDividerRect.setFillColor(sf::Color(220,220,220));
+							leftDividerRect.setFillColor(dividerColorHighlight);
 						} else if (movingRightDivider) {
-							rightDividerRect.setFillColor(sf::Color(220,220,220));
+							rightDividerRect.setFillColor(dividerColorHighlight);
 						} else {
 							if (event.mouseMove.y > topbarHeight && within(event.mouseMove.x, leftDividerX-15, leftDividerX+15)) {
-								leftDividerRect.setFillColor(sf::Color(220,220,220));
+								leftDividerRect.setFillColor(dividerColorHighlight);
 							} else if (event.mouseMove.y > topbarHeight && within(event.mouseMove.x, rightDividerX-15, rightDividerX+15)) {
-								rightDividerRect.setFillColor(sf::Color(220,220,220));
+								rightDividerRect.setFillColor(dividerColorHighlight);
 							}
 						}
 
