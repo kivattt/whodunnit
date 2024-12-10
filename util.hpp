@@ -12,7 +12,7 @@ bool within(T n, T min, T max) {
 	if (n < min) {
 		return false;
 	}
-	if (n > max) {
+	if (n >= max) {
 		return false;
 	}
 

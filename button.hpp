@@ -28,7 +28,7 @@ class Button{
 	Button(sf::Vector2f position, sf::Vector2f size, sf::Font &font, string text) {
 		x = position.x;
 		y = position.y;
-		theText.setPosition(x + 6, y - 2);
+		theText.setPosition(x + 6, y - 3);
 		backgroundRect.setPosition(x, y);
 
 		width = size.x;

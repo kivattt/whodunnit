@@ -352,7 +352,9 @@ class WhoDunnit{
 			theFile.commitLog = gitLog.value();
 		};
 
-		Button button1({0,0}, {40,40}, theFont, "<");
+		int topbarHeight = 35;
+
+		Button button1({0,0}, {topbarHeight,topbarHeight}, theFont, "<");
 		button1.set_on_click([&](){
 			theFile.ignoreRevsList.push_back(theFile.newestCommitHash);
 			/*for (auto &e : theFile.ignoreRevsList) {
@@ -361,7 +363,7 @@ class WhoDunnit{
 			updateGitBlame();
 		});
 
-		Button button2({40,0}, {40,40}, theFont, ">");
+		Button button2({topbarHeight,0}, {topbarHeight,topbarHeight}, theFont, ">");
 		button2.set_on_click([&](){
 			if (theFile.ignoreRevsList.size() == 0) {
 				return;
@@ -370,8 +372,6 @@ class WhoDunnit{
 			theFile.ignoreRevsList.pop_back();
 			updateGitBlame();
 		});
-
-		int topbarHeight = 35;
 
 		while (window.isOpen()) {
 			sf::Event event;
