@@ -43,7 +43,7 @@ string without_ending_slash(string path) {
 string parent_dir(string path) {
 	size_t lastSlash = path.find_last_of('/');
 	if (lastSlash == string::npos) {
-		return path;
+		return ".";
 	}
 
 	return without_ending_slash(path.substr(0, lastSlash));

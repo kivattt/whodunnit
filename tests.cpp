@@ -10,6 +10,7 @@ int main() {
 	std::cout << "Testing parent_dir()" << std::endl;
 	std::map<string, string> expected = {
 		{"/home/user", "/home"},
+		{"something.txt", "."},
 		{"/home/user/file.txt", "/home/user"},
 		{"/home/kivah/main/projects/fen/lua-file-preview-examples/markdown.lua", "/home/kivah/main/projects/fen/lua-file-preview-examples"}
 	};
