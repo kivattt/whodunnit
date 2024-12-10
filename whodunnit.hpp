@@ -93,7 +93,11 @@ struct BlameFile {
 			text.setCharacterSize(fontSizePixels);
 
 			//text.setFillColor(sf::Color(color, color/1.5, color/1.5));
-			text.setFillColor(sf::Color(200,200,200));
+			if (e.commitHash == newestCommitHash) {
+				text.setFillColor(sf::Color(40,40,40));
+			} else {
+				text.setFillColor(sf::Color(200,200,200));
+			}
 			authorLines.push_back(text);
 
 			/*const double lowestBrightness = 0.3;
@@ -102,8 +106,12 @@ struct BlameFile {
 			sf::RectangleShape rect;
 			//rect.setFillColor(sf::Color(color, color/1.5, color/1.5));
 			//int randomHue = rand() / double(RAND_MAX) * 360;
-			double zeroToOne = committer_time_0_to_1(e.committerTime);
-			rect.setFillColor(hsv_to_rgb(221, zeroToOne*0.65, 0.7d * (0.3 + zeroToOne * (1 - 0.3))));
+			if (e.commitHash == newestCommitHash) {
+				rect.setFillColor(hsv_to_rgb(130, 0.65, 1 - 0.3));
+			} else {
+				double zeroToOne = committer_time_0_to_1(e.committerTime);
+				rect.setFillColor(hsv_to_rgb(221, zeroToOne*0.65, 0.7d * (0.3 + zeroToOne * (1 - 0.3))));
+			}
 			blameBgs.push_back(rect);
 		}
 
@@ -140,6 +148,7 @@ class WhoDunnit{
 	int leftDividerX = 190;
 	int rightDividerX = START_WIDTH - 400;
 	bool movingLeftDivider = false;
+	bool movingRightDivider = false;
 
 	void zoom(int level, BlameFile &theFile) {
 		// TODO: Make it logarithmic or whatever so the zoom feels intuitive
@@ -378,8 +387,11 @@ class WhoDunnit{
 		sf::RenderWindow window(sf::VideoMode(START_WIDTH, START_HEIGHT), "whodunnit - " + basename(filename));
 		window.setVerticalSyncEnabled(true);
 
-		sf::RectangleShape verticalDividerRect;
-		verticalDividerRect.setFillColor(sf::Color(100,100,100));
+		sf::RectangleShape leftDividerRect;
+		leftDividerRect.setFillColor(sf::Color(100,100,100));
+
+		sf::RectangleShape rightDividerRect;
+		rightDividerRect.setFillColor(sf::Color(100,100,100));
 
 		/*sf::RectangleShape topbarRect;
 		topbarRect.setPosition(0,0);
@@ -436,8 +448,12 @@ class WhoDunnit{
 							sf::FloatRect visibleArea(0.0f, 0.0f, event.size.width, event.size.height);
 							window.setView(sf::View(visibleArea));
 
-							leftDividerX = std::min(std::max(0, int(window.getSize().x) - LEFT_DIVIDER_FROM_RIGHT), leftDividerX);
-							leftDividerX = std::max(LEFT_DIVIDER_FROM_LEFT, leftDividerX);
+							leftDividerX = std::min(leftDividerX, std::max(0, int(window.getSize().x) - LEFT_DIVIDER_FROM_RIGHT));
+							//leftDividerX = std::max(LEFT_DIVIDER_FROM_LEFT, leftDividerX - LEFT_DIVIDER_FROM_RIGHT);
+							leftDividerX = std::max(leftDividerX, LEFT_DIVIDER_FROM_LEFT);
+
+							rightDividerX = std::min(rightDividerX, std::max(0, int(window.getSize().x) - LEFT_DIVIDER_FROM_RIGHT));
+							rightDividerX = std::max(leftDividerX + LEFT_DIVIDER_FROM_LEFT, rightDividerX);
 						}
 						break;
 					case sf::Event::KeyPressed:
@@ -490,25 +506,37 @@ class WhoDunnit{
 
 						if (event.mouseButton.y > topbarHeight && within(event.mouseButton.x, leftDividerX-15, leftDividerX+15)) {
 							movingLeftDivider = true;
+						} else if (event.mouseButton.y > topbarHeight && within(event.mouseButton.x, rightDividerX-15, rightDividerX+15)) {
+							movingRightDivider = true;
 						}
 						break;
 					case sf::Event::MouseButtonReleased:
 						if (event.mouseButton.button == sf::Mouse::Left) {
 							movingLeftDivider = false;
+							movingRightDivider = false;
 						}
 						break;
 					case sf::Event::MouseMoved:
 						if (movingLeftDivider || (event.mouseMove.y > topbarHeight && within(event.mouseMove.x, leftDividerX-15, leftDividerX+15))) {
-							verticalDividerRect.setFillColor(sf::Color(220,220,220));
+							leftDividerRect.setFillColor(sf::Color(220,220,220));
 						} else {
-							verticalDividerRect.setFillColor(sf::Color(100,100,100));
-						}
-						if (! movingLeftDivider) {
-							break;
+							leftDividerRect.setFillColor(sf::Color(100,100,100));
 						}
 
-						leftDividerX = std::max(LEFT_DIVIDER_FROM_LEFT, event.mouseMove.x);
-						leftDividerX = std::min(leftDividerX, std::max(0, int(window.getSize().x) - LEFT_DIVIDER_FROM_RIGHT));
+						if (movingRightDivider || (event.mouseMove.y > topbarHeight && within(event.mouseMove.x, rightDividerX-15, rightDividerX+15))) {
+							rightDividerRect.setFillColor(sf::Color(220,220,220));
+						} else {
+							rightDividerRect.setFillColor(sf::Color(100,100,100));
+						}
+
+						if (movingLeftDivider) {
+							leftDividerX = std::max(LEFT_DIVIDER_FROM_LEFT, event.mouseMove.x);
+							//leftDividerX = std::min(leftDividerX, std::max(0, int(window.getSize().x) - LEFT_DIVIDER_FROM_RIGHT));
+							leftDividerX = std::min(leftDividerX, rightDividerX - LEFT_DIVIDER_FROM_RIGHT);
+						} else if (movingRightDivider) {
+							rightDividerX = std::max(leftDividerX + LEFT_DIVIDER_FROM_LEFT, event.mouseMove.x);
+							rightDividerX = std::min(rightDividerX, std::max(0, int(window.getSize().x) - LEFT_DIVIDER_FROM_RIGHT));
+						}
 						break;
 					default:
 						break;
@@ -557,7 +585,7 @@ class WhoDunnit{
 			sf::RectangleShape gitLogBGRect;
 			gitLogBGRect.setPosition(rightDividerX, 0);
 			gitLogBGRect.setSize(sf::Vector2f(window.getSize().x - rightDividerX, window.getSize().y));
-			gitLogBGRect.setFillColor(sf::Color(0,0,0));
+			gitLogBGRect.setFillColor(sf::Color(30,30,30));
 			window.draw(gitLogBGRect);
 			for (int i = 0; i < theFile.commitTexts.size(); i++) {
 				auto &e = theFile.commitTexts[i];
@@ -587,9 +615,14 @@ class WhoDunnit{
 
 			window.draw(topbarRect);
 
-			verticalDividerRect.setSize(sf::Vector2f(2, window.getSize().y));
-			verticalDividerRect.setPosition(leftDividerX, topbarHeight);
-			window.draw(verticalDividerRect);
+			leftDividerRect.setSize(sf::Vector2f(2, window.getSize().y));
+			leftDividerRect.setPosition(leftDividerX, topbarHeight);
+
+			rightDividerRect.setSize(sf::Vector2f(2, window.getSize().y));
+			rightDividerRect.setPosition(rightDividerX, topbarHeight);
+
+			window.draw(leftDividerRect);
+			window.draw(rightDividerRect);
 
 			button1.draw(window);
 			button2.draw(window);
