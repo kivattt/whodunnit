@@ -152,6 +152,14 @@ class WhoDunnit{
 		for (sf::Text &text : theFile.authorLines) {
 			text.setCharacterSize(fontSizePixels);
 		}
+
+		// TODO: Maybe make separate zoom for git log
+		for (CommitThing &c : theFile.commitTexts) {
+			c.authorText.setCharacterSize(fontSizePixels);
+			c.timeText.setCharacterSize(fontSizePixels);
+			c.commitHashText.setCharacterSize(fontSizePixels);
+			c.titleText.setCharacterSize(fontSizePixels);
+		}
 	}
 
 	std::optional<vector<Commit>> run_git_log(string filename) {
