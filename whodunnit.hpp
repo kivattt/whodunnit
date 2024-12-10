@@ -119,6 +119,11 @@ struct BlameFile {
 			thing.commitHashText.setCharacterSize(fontSizePixels);
 			thing.titleText.setCharacterSize(fontSizePixels);
 
+			thing.authorText.setFillColor(sf::Color(200,200,200));
+			thing.timeText.setFillColor(sf::Color(200,200,200));
+			thing.commitHashText.setFillColor(sf::Color(200,200,200));
+			thing.titleText.setFillColor(sf::Color(200,200,200));
+
 			thing.authorText.setString(sf::String::fromUtf8(c.author.begin(), c.author.end()));
 			thing.timeText.setString(c.time);
 			thing.commitHashText.setString(c.commitHash);
@@ -133,7 +138,7 @@ class WhoDunnit{
 	public:
 
 	int leftDividerX = 190;
-	int rightDividerX = START_WIDTH - 250;
+	int rightDividerX = START_WIDTH - 400;
 	bool movingLeftDivider = false;
 
 	void zoom(int level, BlameFile &theFile) {
@@ -541,10 +546,15 @@ class WhoDunnit{
 				}
 			}
 
+			sf::RectangleShape gitLogBGRect;
+			gitLogBGRect.setPosition(rightDividerX, 0);
+			gitLogBGRect.setSize(sf::Vector2f(window.getSize().x - rightDividerX, window.getSize().y));
+			gitLogBGRect.setFillColor(sf::Color(0,0,0));
+			window.draw(gitLogBGRect);
 			for (int i = 0; i < theFile.commitTexts.size(); i++) {
 				auto &e = theFile.commitTexts[i];
 				float x = rightDividerX;
-				float y = i * (step-4);
+				float y = topbarHeight + i * (step-4);
 				e.timeText.setPosition(x,y);
 				e.authorText.setPosition(x+100,y);
 				e.commitHashText.setPosition(x,y);
