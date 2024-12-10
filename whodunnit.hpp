@@ -21,8 +21,8 @@
 
 #define START_WIDTH 1280
 #define START_HEIGHT 720
-#define VERT_DIVIDER_FROM_RIGHT 100
-#define VERT_DIVIDER_FROM_LEFT 100
+#define LEFT_DIVIDER_FROM_RIGHT 100
+#define LEFT_DIVIDER_FROM_LEFT 100
 
 using std::string;
 using std::vector;
@@ -436,8 +436,8 @@ class WhoDunnit{
 							sf::FloatRect visibleArea(0.0f, 0.0f, event.size.width, event.size.height);
 							window.setView(sf::View(visibleArea));
 
-							leftDividerX = std::min(std::max(0, int(window.getSize().x) - VERT_DIVIDER_FROM_RIGHT), leftDividerX);
-							leftDividerX = std::max(VERT_DIVIDER_FROM_LEFT, leftDividerX);
+							leftDividerX = std::min(std::max(0, int(window.getSize().x) - LEFT_DIVIDER_FROM_RIGHT), leftDividerX);
+							leftDividerX = std::max(LEFT_DIVIDER_FROM_LEFT, leftDividerX);
 						}
 						break;
 					case sf::Event::KeyPressed:
@@ -507,8 +507,8 @@ class WhoDunnit{
 							break;
 						}
 
-						leftDividerX = std::max(VERT_DIVIDER_FROM_LEFT, event.mouseMove.x);
-						leftDividerX = std::min(leftDividerX, std::max(0, int(window.getSize().x) - VERT_DIVIDER_FROM_RIGHT));
+						leftDividerX = std::max(LEFT_DIVIDER_FROM_LEFT, event.mouseMove.x);
+						leftDividerX = std::min(leftDividerX, std::max(0, int(window.getSize().x) - LEFT_DIVIDER_FROM_RIGHT));
 						break;
 					default:
 						break;
