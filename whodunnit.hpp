@@ -63,6 +63,8 @@ struct BlameFile {
 	string oldestCommitHash = "";
 	string newestCommitHash = "";
 
+	string selectedCommitHash = "";
+
 	double committer_time_0_to_1(unsigned long long committerTime) {
 		double zeroToOne = double(committerTime - oldestCommitterTime) / double(newestCommitterTime - oldestCommitterTime);
 		return zeroToOne;
@@ -73,6 +75,44 @@ struct BlameFile {
 	vector<sf::Text> authorLines;
 	vector<sf::RectangleShape> blameBgs;
 	vector<sf::RectangleShape> gitLogBgs;
+
+	// Returns -1 on error
+	int mouse_y_to_blame_line_index(float mouseY, int topbarHeight) {
+		float yOffset = scrollPositionPixels % fontSizePixels - topbarHeight;
+		float step = (fontSizePixels + fontSizePixels/2);
+		int startIdx = std::max(0, int(std::floor(scrollPositionPixels / step)));
+
+		int ret = startIdx + (mouseY + yOffset) / step;
+		if (ret < startIdx) {
+			return -1;
+		}
+
+		if (ret >= blameLines.size()) {
+			return -1;
+		}
+
+		return ret;
+	}
+
+	// Returns -1 on error
+	// FIXME: Doesn't work, also fix scrolling for the Git Log window
+	int mouse_y_to_git_log_index(float mouseY, int topbarHeight, int gitLogTopBarHeight) {
+		//topbarHeight + gitLogTopBarHeight
+		float yOffset = scrollPositionPixels % fontSizePixels - topbarHeight - gitLogTopBarHeight;
+		int gitLogStep = (float)fontSizePixels * 1.3;
+		int startIdx = std::max(0, int(std::floor(scrollPositionPixels / gitLogStep)));
+
+		int ret = startIdx + (mouseY + yOffset) / gitLogStep;
+		if (ret < startIdx) {
+			return -1;
+		}
+
+		if (ret >= commitLog.size()) {
+			return -1;
+		}
+
+		return ret;
+	}
 
 	void set_texts() {
 		textLines.clear();
@@ -112,7 +152,10 @@ struct BlameFile {
 			sf::RectangleShape rect;
 			//rect.setFillColor(sf::Color(color, color/1.5, color/1.5));
 			//int randomHue = rand() / double(RAND_MAX) * 360;
-			if (e.commitHash == newestCommitHash) {
+
+			if (e.commitHash == selectedCommitHash) {
+				rect.setFillColor(hsv_to_rgb(200, 0.60, 0.65));
+			} else if (e.commitHash == newestCommitHash) {
 				//rect.setFillColor(hsv_to_rgb(130, 0.50, 1 - 0.3));
 				rect.setFillColor(hsv_to_rgb(130, 0.50, 0.4));
 			} else {
@@ -153,6 +196,9 @@ struct BlameFile {
 			sf::RectangleShape rect;
 			rect.setFillColor(gitLogBackgroundColor);
 			rect.setFillColor(i & 1 ? gitLogBackgroundColor : gitLogBackgroundColorAlternate);
+			if (c.commitHash == selectedCommitHash) {
+				rect.setFillColor(hsv_to_rgb(200, 0.60, 0.65));
+			}
 			gitLogBgs.push_back(rect);
 		}
 	}
@@ -537,6 +583,22 @@ class WhoDunnit{
 							movingLeftDivider = true;
 						} else if (event.mouseButton.y > topbarHeight && within(event.mouseButton.x, rightDividerX-15, rightDividerX+15)) {
 							movingRightDivider = true;
+						} else if (event.mouseButton.y > topbarHeight && event.mouseButton.x < leftDividerX) { // Clicking a blame on the left
+							int index = theFile.mouse_y_to_blame_line_index(event.mouseButton.y, topbarHeight);
+							if (index == -1) {
+								break;
+							}
+
+							theFile.selectedCommitHash = theFile.blameLines[index].commitHash;
+							theFile.set_texts();
+						} else if (event.mouseButton.y > (topbarHeight + gitLogTopBarHeight) && event.mouseButton.x > rightDividerX) { // Clicking a commit (Git Log) on the right
+							int index = theFile.mouse_y_to_git_log_index(event.mouseButton.y, topbarHeight, gitLogTopBarHeight);
+							if (index == -1) {
+								break;
+							}
+
+							theFile.selectedCommitHash = theFile.blameLines[index].commitHash;
+							theFile.set_texts();
 						}
 						break;
 					case sf::Event::MouseButtonReleased:
