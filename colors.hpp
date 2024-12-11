@@ -11,4 +11,6 @@ const sf::Color gitLogBackgroundColorAlternate = sf::Color(35,35,35);
 const sf::Color gitLogTextColor = sf::Color(200,200,200);
 const sf::Color gitLogTextColorDarker = sf::Color(100,100,100);
 
+const sf::Color paneTitleTextColor = sf::Color(230,230,230); // The "Git Log" text
+
 #endif // COLORS_HPP

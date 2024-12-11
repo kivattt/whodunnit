@@ -4,10 +4,12 @@
 - Author name text alignment (it is slightly too high up)
 - Smooth scrolling, better scrolling, mouse-acceleration style scrolling
 
-- Git log buttons:
+- Try out some non-monospaced fonts for stuff like pane title texts
+
+- Git log buttons (might be better as a drop-down selection!):
     - Show full history
     - Hide commits not shown in blame (hide shadowed commits) (hide invisible commits) "overshadowed by a later commit"
-    - Show tooltips, also on red commits (question mark button on the right of them?) in git log explaining they are "overshadowed by a later commit, not shown in the currently visible git blame"
+    - Show tooltips, also on overshadowed commits (question mark button on the right of them?) in git log explaining they are "overshadowed by a later commit, not shown in the currently visible git blame"
 
 - Look into the `git blame --incremental` flag
 - Look into the `git blame --encoding=...` flag for encoding author names and stuff

@@ -99,7 +99,8 @@ struct BlameFile {
 
 			//text.setFillColor(sf::Color(color, color/1.5, color/1.5));
 			if (e.commitHash == newestCommitHash) {
-				text.setFillColor(sf::Color(30,30,30));
+				//text.setFillColor(sf::Color(30,30,30));
+				text.setFillColor(sf::Color(200,200,200));
 			} else {
 				text.setFillColor(sf::Color(200,200,200));
 			}
@@ -112,7 +113,8 @@ struct BlameFile {
 			//rect.setFillColor(sf::Color(color, color/1.5, color/1.5));
 			//int randomHue = rand() / double(RAND_MAX) * 360;
 			if (e.commitHash == newestCommitHash) {
-				rect.setFillColor(hsv_to_rgb(130, 0.50, 1 - 0.3));
+				//rect.setFillColor(hsv_to_rgb(130, 0.50, 1 - 0.3));
+				rect.setFillColor(hsv_to_rgb(130, 0.50, 0.4));
 			} else {
 				double zeroToOne = committer_time_0_to_1(e.committerTime);
 				rect.setFillColor(hsv_to_rgb(221, zeroToOne*0.65, 0.7d * (0.3 + zeroToOne * (1 - 0.3))));
@@ -440,6 +442,12 @@ class WhoDunnit{
 		};
 
 		int topbarHeight = 35;
+		int gitLogTopBarHeight = 30;
+
+		sf::Text gitLogTopBarTitleText;
+		gitLogTopBarTitleText.setFont(theFont);
+		gitLogTopBarTitleText.setString("Git Log");
+		gitLogTopBarTitleText.setFillColor(paneTitleTextColor);
 
 		float h = topbarHeight;
 		Button button1({0,0}, {h,h}, theFont, "<");
@@ -617,7 +625,7 @@ class WhoDunnit{
 				auto &e = theFile.commitTexts[i];
 				float x = rightDividerX+5;
 				//float y = int(topbarHeight + i * gitLogStep);
-				float y = topbarHeight + i * gitLogStep;
+				float y = topbarHeight + gitLogTopBarHeight + i * gitLogStep;
 
 				theFile.gitLogBgs[i].setSize(sf::Vector2f(window.getSize().x - rightDividerX, gitLogStep));
 				theFile.gitLogBgs[i].setPosition(rightDividerX, y);
@@ -633,6 +641,16 @@ class WhoDunnit{
 				//window.draw(e.commitHashText);
 				window.draw(e.titleText);
 			}
+
+			sf::RectangleShape gitLogTopBarDivider;
+			gitLogTopBarDivider.setPosition(rightDividerX,topbarHeight+gitLogTopBarHeight-1);
+			gitLogTopBarDivider.setSize(sf::Vector2f(window.getSize().x - rightDividerX, 1));
+			gitLogTopBarDivider.setFillColor(dividerColor);
+			window.draw(gitLogTopBarDivider);
+
+			gitLogTopBarTitleText.setCharacterSize(15);
+			gitLogTopBarTitleText.setPosition(rightDividerX + 7, topbarHeight + 7);
+			window.draw(gitLogTopBarTitleText);
 
 			sf::VertexArray topbarRect(sf::TriangleStrip, 4);
 			topbarRect[0].position = sf::Vector2f(0,0);
