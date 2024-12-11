@@ -442,7 +442,7 @@ class WhoDunnit{
 		};
 
 		int topbarHeight = 35;
-		int gitLogTopBarHeight = 30;
+		int gitLogTopBarHeight = 31;
 
 		sf::Text gitLogTopBarTitleText;
 		gitLogTopBarTitleText.setFont(theFont);
