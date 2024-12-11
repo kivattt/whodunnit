@@ -71,6 +71,7 @@ struct BlameFile {
 	}
 
 	int scrollPositionPixels = 0;
+	int gitLogScrollPositionPixels = 0;
 	vector<sf::Text> textLines;
 	vector<sf::Text> authorLines;
 	vector<sf::RectangleShape> blameBgs;
@@ -564,9 +565,16 @@ class WhoDunnit{
 					case sf::Event::MouseWheelScrolled:
 						if (! (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RControl))) {
 							// Scrolling
-							theFile.scrollPositionPixels -= event.mouseWheelScroll.delta * 60;
-							if (theFile.scrollPositionPixels < 0) {
-								theFile.scrollPositionPixels = 0;
+							if (event.mouseWheelScroll.x < rightDividerX) {
+								theFile.scrollPositionPixels -= event.mouseWheelScroll.delta * 60;
+								if (theFile.scrollPositionPixels < 0) {
+									theFile.scrollPositionPixels = 0;
+								}
+							} else {
+								theFile.gitLogScrollPositionPixels -= event.mouseWheelScroll.delta * 60;
+								if (theFile.gitLogScrollPositionPixels < 0) {
+									theFile.gitLogScrollPositionPixels = 0;
+								}
 							}
 							break;
 						}
@@ -642,9 +650,11 @@ class WhoDunnit{
 			button1.set_size(topbarHeight, topbarHeight);
 			button2.set_size(topbarHeight, topbarHeight);
 
-			float yOffset = theFile.scrollPositionPixels % fontSizePixels - topbarHeight;
-			//int startIdx = std::max(0, int(std::floor(theFile.scrollPositionPixels / fontSizePixels)));
 			float step = (fontSizePixels + fontSizePixels/2);
+			float yOffset = theFile.scrollPositionPixels % int(step) - topbarHeight;
+
+			//float yOffset = theFile.scrollPositionPixels % fontSizePixels - topbarHeight;
+			//float step = (fontSizePixels + fontSizePixels/2);
 			int startIdx = std::max(0, int(std::floor(theFile.scrollPositionPixels / step)));
 
 			for (int i = startIdx; i < theFile.textLines.size(); i++) {
@@ -683,11 +693,16 @@ class WhoDunnit{
 			window.draw(gitLogBGRect);
 			//float gitLogStep = fontSizePixels * 1.1;
 			int gitLogStep = (float)fontSizePixels * 1.3;
-			for (int i = 0; i < theFile.commitTexts.size(); i++) {
+			float gitLogYOffset = theFile.gitLogScrollPositionPixels % gitLogStep - topbarHeight - gitLogTopBarHeight;
+			int gitLogStartIdx = std::max(0, int(std::floor(theFile.gitLogScrollPositionPixels / step)));
+			//for (int i = 0; i < theFile.commitTexts.size(); i++) {
+			for (int i = gitLogStartIdx; i < theFile.commitTexts.size(); i++) {
+				int iFromZero = i - gitLogStartIdx;
+
 				auto &e = theFile.commitTexts[i];
 				float x = rightDividerX+5;
 				//float y = int(topbarHeight + i * gitLogStep);
-				float y = topbarHeight + gitLogTopBarHeight + i * gitLogStep;
+				float y = topbarHeight + gitLogTopBarHeight + iFromZero * gitLogStep;
 
 				theFile.gitLogBgs[i].setSize(sf::Vector2f(window.getSize().x - rightDividerX, gitLogStep));
 				theFile.gitLogBgs[i].setPosition(rightDividerX, y);
@@ -702,6 +717,10 @@ class WhoDunnit{
 				window.draw(e.timeText);
 				//window.draw(e.commitHashText);
 				window.draw(e.titleText);
+
+				if (y + gitLogStep > window.getSize().y) {
+					break;
+				}
 			}
 
 			sf::RectangleShape gitLogTopBarDivider;
