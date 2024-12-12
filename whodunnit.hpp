@@ -453,10 +453,6 @@ class WhoDunnit{
 		//BlameFile theFile = blameFile.value();
 		theFile.set_texts();
 
-		for (Commit &c : theFile.commitLog) {
-			std::cout << c.time << ' ' << c.author << ' ' << c.commitHash << ' ' << c.title << '\n';
-		}
-
 		sf::RenderWindow window(sf::VideoMode(START_WIDTH, START_HEIGHT), "whodunnit - " + basename(filename));
 		window.setVerticalSyncEnabled(true);
 

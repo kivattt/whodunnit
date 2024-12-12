@@ -4,6 +4,14 @@
 - Author name text alignment (it is slightly too high up)
 - Smooth scrolling, better scrolling, mouse-acceleration style scrolling
 
+- When selecting a commit from the Blame list, scroll to the commit on the right in the Git Log window
+- When selecting a commit from the Git Log window, scroll to the first commit on the left
+
+- Right click -> Checkout revision (like in Intellij IDEA)
+- Right click -> Open in Github (with a Github icon?) (like in Intellij IDEA)
+
+- Show number of visible/overshadowed commits somewhere
+
 - Try out some non-monospaced fonts for stuff like pane title texts
 
 - Git log buttons (might be better as a drop-down selection!):
