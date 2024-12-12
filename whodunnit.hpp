@@ -533,9 +533,12 @@ class WhoDunnit{
 						break;
 					case sf::Event::KeyPressed:
 						switch (event.key.code) {
-							case sf::Keyboard::Escape:
 							case sf::Keyboard::Q:
 								window.close();
+								break;
+							case sf::Keyboard::Escape:
+								theFile.selectedCommitHash = "";
+								theFile.set_texts();
 								break;
 							case sf::Keyboard::Home:
 								if (ctrlDown) {
@@ -716,6 +719,12 @@ class WhoDunnit{
 					break;
 				}
 			}
+
+			sf::RectangleShape gitLogTopBarRect;
+			gitLogTopBarRect.setPosition(rightDividerX, topbarHeight);
+			gitLogTopBarRect.setSize(sf::Vector2f(window.getSize().x - rightDividerX, gitLogTopBarHeight));
+			gitLogTopBarRect.setFillColor(gitLogBackgroundColor);
+			window.draw(gitLogTopBarRect);
 
 			sf::RectangleShape gitLogTopBarDivider;
 			gitLogTopBarDivider.setPosition(rightDividerX,topbarHeight+gitLogTopBarHeight-1);
