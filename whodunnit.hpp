@@ -79,8 +79,8 @@ struct BlameFile {
 
 	// Returns -1 on error
 	int mouse_y_to_blame_line_index(float mouseY, int topbarHeight) {
-		float yOffset = scrollPositionPixels % fontSizePixels - topbarHeight;
 		float step = (fontSizePixels + fontSizePixels/2);
+		float yOffset = scrollPositionPixels % int(step) - topbarHeight;
 		int startIdx = std::max(0, int(std::floor(scrollPositionPixels / step)));
 
 		int ret = startIdx + (mouseY + yOffset) / step;
@@ -98,12 +98,11 @@ struct BlameFile {
 	// Returns -1 on error
 	// FIXME: Doesn't work, also fix scrolling for the Git Log window
 	int mouse_y_to_git_log_index(float mouseY, int topbarHeight, int gitLogTopBarHeight) {
-		//topbarHeight + gitLogTopBarHeight
-		float yOffset = scrollPositionPixels % fontSizePixels - topbarHeight - gitLogTopBarHeight;
-		int gitLogStep = (float)fontSizePixels * 1.3;
-		int startIdx = std::max(0, int(std::floor(scrollPositionPixels / gitLogStep)));
+		float gitLogStep = (float)fontSizePixels * 1.3;
+		float gitLogYOffset = gitLogScrollPositionPixels % int(gitLogStep) - topbarHeight - gitLogTopBarHeight;
+		int startIdx = std::max(0, int(std::floor(gitLogScrollPositionPixels / gitLogStep)));
 
-		int ret = startIdx + (mouseY + yOffset) / gitLogStep;
+		int ret = startIdx + (mouseY + gitLogYOffset) / gitLogStep;
 		if (ret < startIdx) {
 			return -1;
 		}
@@ -605,7 +604,7 @@ class WhoDunnit{
 								break;
 							}
 
-							theFile.selectedCommitHash = theFile.blameLines[index].commitHash;
+							theFile.selectedCommitHash = theFile.commitLog[index].commitHash;
 							theFile.set_texts();
 						}
 						break;
@@ -652,25 +651,22 @@ class WhoDunnit{
 
 			float step = (fontSizePixels + fontSizePixels/2);
 			float yOffset = theFile.scrollPositionPixels % int(step) - topbarHeight;
-
-			//float yOffset = theFile.scrollPositionPixels % fontSizePixels - topbarHeight;
-			//float step = (fontSizePixels + fontSizePixels/2);
 			int startIdx = std::max(0, int(std::floor(theFile.scrollPositionPixels / step)));
 
 			for (int i = startIdx; i < theFile.textLines.size(); i++) {
 				int iFromZero = i - startIdx;
-				float y = iFromZero * step;
+				float y = iFromZero * step - yOffset;
 
 				theFile.blameBgs[i].setSize(sf::Vector2f(leftDividerX, step));
-				theFile.blameBgs[i].setPosition(0, y - yOffset);
+				theFile.blameBgs[i].setPosition(0, y);
 				window.draw(theFile.blameBgs[i]);
 
-				theFile.authorLines[i].setPosition(0, y - yOffset);
+				theFile.authorLines[i].setPosition(0, y);
 				window.draw(theFile.authorLines[i]);
 
 				sf::RectangleShape rect;
 				rect.setSize(sf::Vector2f(window.getSize().x, step));
-				rect.setPosition(leftDividerX+2, y - yOffset);
+				rect.setPosition(leftDividerX+2, y);
 				sf::Color c = theFile.blameBgs[i].getFillColor();
 				c.r /= 5;
 				c.g /= 5;
@@ -678,7 +674,7 @@ class WhoDunnit{
 				rect.setFillColor(c);
 				window.draw(rect);
 
-				theFile.textLines[i].setPosition(leftDividerX+10, y - yOffset);
+				theFile.textLines[i].setPosition(leftDividerX+10, y);
 				window.draw(theFile.textLines[i]);
 
 				if (y + step > window.getSize().y) {
@@ -691,23 +687,21 @@ class WhoDunnit{
 			gitLogBGRect.setSize(sf::Vector2f(window.getSize().x - rightDividerX, window.getSize().y));
 			gitLogBGRect.setFillColor(gitLogBackgroundColor);
 			window.draw(gitLogBGRect);
-			//float gitLogStep = fontSizePixels * 1.1;
-			int gitLogStep = (float)fontSizePixels * 1.3;
-			float gitLogYOffset = theFile.gitLogScrollPositionPixels % gitLogStep - topbarHeight - gitLogTopBarHeight;
-			int gitLogStartIdx = std::max(0, int(std::floor(theFile.gitLogScrollPositionPixels / step)));
+
+			float gitLogStep = (float)fontSizePixels * 1.3;
+			float gitLogYOffset = theFile.gitLogScrollPositionPixels % int(gitLogStep) - topbarHeight - gitLogTopBarHeight;
+			int gitLogStartIdx = std::max(0, int(std::floor(theFile.gitLogScrollPositionPixels / gitLogStep)));
 			//for (int i = 0; i < theFile.commitTexts.size(); i++) {
 			for (int i = gitLogStartIdx; i < theFile.commitTexts.size(); i++) {
 				int iFromZero = i - gitLogStartIdx;
-
-				auto &e = theFile.commitTexts[i];
 				float x = rightDividerX+5;
-				//float y = int(topbarHeight + i * gitLogStep);
-				float y = topbarHeight + gitLogTopBarHeight + iFromZero * gitLogStep;
+				float y = iFromZero * gitLogStep - gitLogYOffset;
 
 				theFile.gitLogBgs[i].setSize(sf::Vector2f(window.getSize().x - rightDividerX, gitLogStep));
 				theFile.gitLogBgs[i].setPosition(rightDividerX, y);
 				window.draw(theFile.gitLogBgs[i]);
 
+				auto &e = theFile.commitTexts[i];
 				e.timeText.setPosition(x,y);
 				e.authorText.setPosition(x+100,y);
 				e.commitHashText.setPosition(x,y);
