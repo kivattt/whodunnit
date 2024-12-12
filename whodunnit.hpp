@@ -694,7 +694,7 @@ class WhoDunnit{
 			for (int i = gitLogStartIdx; i < theFile.commitTexts.size(); i++) {
 				int iFromZero = i - gitLogStartIdx;
 				float x = rightDividerX+5;
-				float y = iFromZero * gitLogStep - gitLogYOffset;
+				int y = iFromZero * gitLogStep - gitLogYOffset;
 
 				theFile.gitLogBgs[i].setSize(sf::Vector2f(window.getSize().x - rightDividerX, gitLogStep));
 				theFile.gitLogBgs[i].setPosition(rightDividerX, y);
