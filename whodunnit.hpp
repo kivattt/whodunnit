@@ -480,7 +480,18 @@ class WhoDunnit{
 			}
 		});
 		rightClickMenu.add_button(theFont, "Open on GitHub", &githubSpr, [&](){
-			std::cout << "Open on GitHub\n";
+			string remote = get_remote_url(filename);
+			if (remote == "") {
+				return;
+			}
+
+			if (remote.ends_with(".git")) {
+				remote = remote.substr(0, remote.size()-4);
+			}
+
+			// Checked that it works for GitHub, Gitlab and Gitea
+			string url = remote + "/commit/" + theFile.selectedCommitHash;
+			int ignored = system(string("xdg-open " + sanitize_shell_argument(url)).c_str());
 		});
 		rightClickMenu.add_button(theFont, "Checkout revision", nullptr, [&](){
 			std::cout << "Checkout revision\n";

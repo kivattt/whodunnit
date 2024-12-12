@@ -1,6 +1,11 @@
 #ifndef UTIL_HPP
 #define UTIL_HPP
 
+#include <cstdlib>
+#include <fstream>
+#include <sstream>
+#include <cstdio>
+#include <unistd.h>
 #include <string>
 #include <cmath>
 #include <SFML/Graphics.hpp>
@@ -118,6 +123,45 @@ sf::Color hsv_to_rgb(double h, double s, double v) {
 	}
 
 	return sf::Color(r*255, g*255, b*255);
+}
+
+// Returns an empty string "" if nothing found
+string get_remote_url(string filename) {
+	char tempFilename[] = "/tmp/whodunnit-XXXXXX";
+	int fd = mkstemp(tempFilename);
+	if (fd == -1) {
+		return "";
+	}
+	close(fd);
+
+	char *previousDirName = get_current_dir_name();
+	if (chdir(parent_dir(filename).c_str()) == -1) {
+		free(previousDirName);
+		return "";
+	}
+
+	int exitCode = system(string("git config --get remote.origin.url > " + string(tempFilename)).c_str());
+	if (exitCode != 0) {
+		free(previousDirName);
+		return "";
+	}
+
+	if (chdir(previousDirName) == -1) {
+		free(previousDirName);
+		return "";
+	}
+
+	std::ifstream file(tempFilename);
+	std::stringstream ss;
+	ss << file.rdbuf();
+	string ret = ss.str();
+	file.close();
+
+	// Delete the temp file
+	unlink(tempFilename);
+
+	free(previousDirName);
+	return ret.substr(0, ret.size()-1);
 }
 
 #endif // UTIL_HPP
