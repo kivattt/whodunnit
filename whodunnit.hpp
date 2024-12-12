@@ -642,6 +642,8 @@ class WhoDunnit{
 						} else if (event.mouseButton.x < leftDividerX) { // Clicking a blame on the left
 							int index = theFile.mouse_y_to_blame_line_index(event.mouseButton.y, topbarHeight);
 							if (index == -1) {
+								theFile.selectedCommitHash = "";
+								theFile.set_texts();
 								break;
 							}
 
@@ -654,6 +656,8 @@ class WhoDunnit{
 						} else if (event.mouseButton.y > (topbarHeight + gitLogTopBarHeight) && event.mouseButton.x > rightDividerX) { // Clicking a commit (Git Log) on the right
 							int index = theFile.mouse_y_to_git_log_index(event.mouseButton.y, topbarHeight, gitLogTopBarHeight);
 							if (index == -1) {
+								theFile.selectedCommitHash = "";
+								theFile.set_texts();
 								break;
 							}
 
