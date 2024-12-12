@@ -19,6 +19,7 @@
 #include "util.hpp"
 #include "button.hpp"
 #include "colors.hpp"
+#include "rightclickmenu.hpp"
 
 #define START_WIDTH 1280
 #define START_HEIGHT 720
@@ -462,6 +463,14 @@ class WhoDunnit{
 		sf::RectangleShape rightDividerRect;
 		rightDividerRect.setFillColor(dividerColor);
 
+		RightClickMenu rightClickMenu;
+		rightClickMenu.add_button(theFont, "Open in Github", [&](){
+			std::cout << "Open in Github\n";
+		});
+		rightClickMenu.add_button(theFont, "Checkout revision", [&](){
+			std::cout << "Checkout revision\n";
+		});
+
 		/*sf::RectangleShape topbarRect;
 		topbarRect.setPosition(0,0);
 		topbarRect.setSize(sf::Vector2f(window.getSize().x, topbarHeight));
@@ -507,6 +516,7 @@ class WhoDunnit{
 			while (window.pollEvent(event)) {
 				button1.update(event);
 				button2.update(event);
+				rightClickMenu.update(event);
 
 				bool ctrlDown = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RControl);
 
@@ -528,6 +538,8 @@ class WhoDunnit{
 						}
 						break;
 					case sf::Event::KeyPressed:
+						rightClickMenu.hide();
+
 						switch (event.key.code) {
 							case sf::Keyboard::Q:
 								window.close();
@@ -581,15 +593,25 @@ class WhoDunnit{
 						zoom(fontSizePixels + event.mouseWheelScroll.delta, theFile);
 						break;
 					case sf::Event::MouseButtonPressed:
-						if (event.mouseButton.button != sf::Mouse::Left) {
+						{
+						bool isLeftClick = event.mouseButton.button == sf::Mouse::Left;
+						bool isRightClick = event.mouseButton.button == sf::Mouse::Right;
+						if (rightClickMenu.is_visible()) {
+							rightClickMenu.hide();
 							break;
 						}
 
-						if (event.mouseButton.y > topbarHeight && within(event.mouseButton.x, leftDividerX-15, leftDividerX+15)) {
+						rightClickMenu.hide();
+						
+						if (event.mouseButton.y <= topbarHeight) {
+							break;
+						}
+
+						if (isLeftClick && within(event.mouseButton.x, leftDividerX-15, leftDividerX+15)) {
 							movingLeftDivider = true;
-						} else if (event.mouseButton.y > topbarHeight && within(event.mouseButton.x, rightDividerX-15, rightDividerX+15)) {
+						} else if (isLeftClick && within(event.mouseButton.x, rightDividerX-15, rightDividerX+15)) {
 							movingRightDivider = true;
-						} else if (event.mouseButton.y > topbarHeight && event.mouseButton.x < leftDividerX) { // Clicking a blame on the left
+						} else if (event.mouseButton.x < leftDividerX) { // Clicking a blame on the left
 							int index = theFile.mouse_y_to_blame_line_index(event.mouseButton.y, topbarHeight);
 							if (index == -1) {
 								break;
@@ -597,6 +619,10 @@ class WhoDunnit{
 
 							theFile.selectedCommitHash = theFile.blameLines[index].commitHash;
 							theFile.set_texts();
+							if (isRightClick) {
+								rightClickMenu.set_position(event.mouseButton.x, event.mouseButton.y);
+								rightClickMenu.show();
+							}
 						} else if (event.mouseButton.y > (topbarHeight + gitLogTopBarHeight) && event.mouseButton.x > rightDividerX) { // Clicking a commit (Git Log) on the right
 							int index = theFile.mouse_y_to_git_log_index(event.mouseButton.y, topbarHeight, gitLogTopBarHeight);
 							if (index == -1) {
@@ -605,8 +631,13 @@ class WhoDunnit{
 
 							theFile.selectedCommitHash = theFile.commitLog[index].commitHash;
 							theFile.set_texts();
+							if (isRightClick) {
+								rightClickMenu.set_position(event.mouseButton.x, event.mouseButton.y);
+								rightClickMenu.show();
+							}
 						}
 						break;
+						}
 					case sf::Event::MouseButtonReleased:
 						if (event.mouseButton.button == sf::Mouse::Left) {
 							movingLeftDivider = false;
@@ -616,6 +647,10 @@ class WhoDunnit{
 					case sf::Event::MouseMoved:
 						leftDividerRect.setFillColor(dividerColor);
 						rightDividerRect.setFillColor(dividerColor);
+
+						if (rightClickMenu.is_visible()) {
+							break;
+						}
 
 						if (movingLeftDivider) {
 							leftDividerRect.setFillColor(dividerColorHighlight);
@@ -697,18 +732,27 @@ class WhoDunnit{
 				int y = iFromZero * gitLogStep - gitLogYOffset;
 
 				theFile.gitLogBgs[i].setSize(sf::Vector2f(window.getSize().x - rightDividerX, gitLogStep));
-				theFile.gitLogBgs[i].setPosition(rightDividerX, y);
-				window.draw(theFile.gitLogBgs[i]);
 
 				auto &e = theFile.commitTexts[i];
-				e.timeText.setPosition(x,y);
-				e.authorText.setPosition(x+100,y);
-				e.commitHashText.setPosition(x,y);
-				e.titleText.setPosition(x+220,y);
 
-				window.draw(e.authorText);
+				theFile.gitLogBgs[i].setPosition(rightDividerX, y);
+				window.draw(theFile.gitLogBgs[i]);
+				e.timeText.setPosition(x,y);
 				window.draw(e.timeText);
+
+				theFile.gitLogBgs[i].setPosition(rightDividerX+100, y);
+				window.draw(theFile.gitLogBgs[i]);
+				e.authorText.setPosition(x+100,y);
+				window.draw(e.authorText);
+
+				//theFile.gitLogBgs[i].setPosition(rightDividerX, y);
+				//window.draw(theFile.gitLogBgs[i]);
+				//e.commitHashText.setPosition(x,y);
 				//window.draw(e.commitHashText);
+
+				theFile.gitLogBgs[i].setPosition(rightDividerX+220, y);
+				window.draw(theFile.gitLogBgs[i]);
+				e.titleText.setPosition(x+220,y);
 				window.draw(e.titleText);
 
 				if (y + gitLogStep > window.getSize().y) {
@@ -762,6 +806,7 @@ class WhoDunnit{
 
 			button1.draw(window);
 			button2.draw(window);
+			rightClickMenu.draw(window);
 
 			window.display();
 		}
