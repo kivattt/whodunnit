@@ -15,6 +15,7 @@ class Button{
 	float height = 30;
 
 	int textYOffset = -3;
+	int textXOffset = 6;
 
 	// TODO: Make this a rounded rectangle, see:
 	// https://github.com/SFML/SFML/wiki/Source%3A-Draw-Rounded-Rectangle/_edit
@@ -32,7 +33,7 @@ class Button{
 	Button(sf::Vector2f position, sf::Vector2f size, sf::Font &font, string text) {
 		x = position.x;
 		y = position.y;
-		theText.setPosition(x + 6, y + textYOffset);
+		theText.setPosition(x + textXOffset, y + textYOffset);
 		backgroundRect.setPosition(x, y);
 
 		width = size.x;
@@ -45,18 +46,23 @@ class Button{
 	}
 
 	// By default, clicking is done when a mouse button is released.
-	// By calling set_click_on_release(false), clicking is done when a mouse button is pressed instead.
-	void set_click_on_release(bool shouldClickOnRelease) {
-		clickOnRelease = shouldClickOnRelease;
+	// By calling set_click_on_press(true), clicking is instead done when a mouse button is pressed.
+	void set_click_on_press(bool shouldClickOnPress) {
+		clickOnRelease = !shouldClickOnPress;
 	}
 
 	void set_character_size(int size) {
 		theText.setCharacterSize(size);
 	}
 
+	void set_text_x_offset(int newTextXOffset) {
+		textXOffset = newTextXOffset;
+		theText.setPosition(x + textXOffset, y + textYOffset);
+	}
+
 	void set_text_y_offset(int newTextYOffset) {
 		textYOffset = newTextYOffset;
-		theText.setPosition(x + 6, y + textYOffset);
+		theText.setPosition(x + textXOffset, y + textYOffset);
 	}
 
 	void set_size(float newWidth, float newHeight) {
@@ -68,7 +74,7 @@ class Button{
 	void set_position(float newX, float newY) {
 		x = newX;
 		y = newY;
-		theText.setPosition(x + 6, y + textYOffset);
+		theText.setPosition(x + textXOffset, y + textYOffset);
 		backgroundRect.setPosition(x, y);
 	}
 
@@ -76,7 +82,8 @@ class Button{
 		onClickFunction = func;
 	}
 
-	void update(sf::Event event) {
+	// Returns true if the button was triggered
+	bool update(sf::Event event) {
 		switch (event.type) {
 			case sf::Event::MouseMoved:
 				hovered = within((float)event.mouseMove.x, x, x+width) && within((float)event.mouseMove.y, y, y+height);
@@ -88,6 +95,7 @@ class Button{
 				if (!clickOnRelease && pressed) {
 					pressed = false;
 					onClickFunction();
+					return true;
 				}
 				break;
 			case sf::Event::MouseButtonReleased:
@@ -100,6 +108,7 @@ class Button{
 				if (clickOnRelease && pressed) {
 					pressed = false;
 					onClickFunction();
+					return true;
 				}
 				break;
 			case sf::Event::LostFocus:
@@ -107,6 +116,8 @@ class Button{
 				pressed = false;
 				break;
 		}
+
+		return false;
 	}
 
 	void draw(sf::RenderWindow &window) {

@@ -13,4 +13,6 @@ const sf::Color gitLogTextColorDarker = sf::Color(100,100,100);
 
 const sf::Color paneTitleTextColor = sf::Color(230,230,230); // The "Git Log" text
 
+const sf::Color rightClickMenuBackgroundColor = sf::Color(10,10,10);
+
 #endif // COLORS_HPP

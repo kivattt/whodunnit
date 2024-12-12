@@ -16,6 +16,7 @@ class RightClickMenu {
 	const int buttonHeight = 25;
 	sf::RectangleShape backgroundRect;
 	vector<Button> buttons;
+	vector<sf::Sprite*> buttonsIcons;
 
 	float x = 0;
 	float y = 0;
@@ -26,7 +27,7 @@ class RightClickMenu {
 	public:
 
 	RightClickMenu() {
-		backgroundRect.setFillColor(sf::Color(30,30,30));
+		backgroundRect.setFillColor(rightClickMenuBackgroundColor);
 		set_size(250);
 	}
 
@@ -48,23 +49,34 @@ class RightClickMenu {
 
 	void set_position(float newX, float newY) {
 		x = newX;
-		y = newY;
+		y = newY - buttonHeight/2;
 
 		backgroundRect.setPosition(x, y);
 
 		for (int i = 0; i < buttons.size(); i++) {
 			buttons[i].set_position(x, y + i * buttonHeight);
 		}
+
+		int i = 0;
+		for (sf::Sprite *spr : buttonsIcons) {
+			if (spr == nullptr) {
+				continue;
+			}
+			spr->setPosition(sf::Vector2f(x + 8, y + 3 + i * buttonHeight));
+			++i;
+		}
 	}
 
-	void add_button(sf::Font &font, string text, std::function<void()> onClickFunction) {
+	void add_button(sf::Font &font, string text, sf::Sprite *icon, std::function<void()> onClickFunction) {
 		// The button position and size are set at the end
 		Button button({0,0}, {0,0}, font, text);
 		button.set_character_size(15);
 		button.set_on_click(onClickFunction);
-		button.set_click_on_release(false);
+		button.set_click_on_press(true);
 		button.set_text_y_offset(3);
+		button.set_text_x_offset(30);
 		buttons.push_back(button);
+		buttonsIcons.push_back(icon);
 
 		set_position(x, y);
 		set_size(width);
@@ -85,6 +97,9 @@ class RightClickMenu {
 
 		for (Button &button : buttons) {
 			button.update(event);
+			/*if (button.update(event)) {
+				hide();
+			}*/
 		}
 	}
 
@@ -93,10 +108,33 @@ class RightClickMenu {
 			return;
 		}
 
+		float xx = x + 5;
+		float yy = y + 5 + buttonHeight/2;
+		float theWidth = width - 5;
+		float height = (float)std::max(buttonHeight, (int)buttons.size() * buttonHeight);
+		sf::VertexArray gradient(sf::TriangleStrip, 4);
+		gradient[0].position = sf::Vector2f(xx, yy+height);
+		gradient[1].position = sf::Vector2f(xx+theWidth, yy+height);
+		gradient[2].position = sf::Vector2f(xx,yy);
+		gradient[3].position = sf::Vector2f(xx+theWidth, yy);
+
+		gradient[0].color = sf::Color(0,0,0, 0);
+		gradient[1].color = sf::Color(0,0,0, 0);
+		gradient[2].color = sf::Color(0,0,0, 255);
+		gradient[3].color = sf::Color(0,0,0, 255);
+		window.draw(gradient);
+
 		window.draw(backgroundRect);
 
 		for (Button &button : buttons) {
 			button.draw(window);
+		}
+
+		for (sf::Sprite *spr : buttonsIcons) {
+			if (spr == nullptr) {
+				continue;
+			}
+			window.draw(*spr);
 		}
 	}
 };

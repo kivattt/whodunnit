@@ -463,11 +463,24 @@ class WhoDunnit{
 		sf::RectangleShape rightDividerRect;
 		rightDividerRect.setFillColor(dividerColor);
 
+		sf::Texture clipboardTxt;
+		clipboardTxt.loadFromFile("icons/clipboard.png");
+		sf::Sprite clipboardSpr;
+		clipboardSpr.setTexture(clipboardTxt);
+
+		sf::Texture githubTxt;
+		githubTxt.loadFromFile("icons/github.png");
+		sf::Sprite githubSpr;
+		githubSpr.setTexture(githubTxt);
+
 		RightClickMenu rightClickMenu;
-		rightClickMenu.add_button(theFont, "Open in Github", [&](){
-			std::cout << "Open in Github\n";
+		rightClickMenu.add_button(theFont, "Copy Revision Number", &clipboardSpr, [&](){
+			std::cout << "Copy Revision Number: " << theFile.selectedCommitHash << std::endl;
 		});
-		rightClickMenu.add_button(theFont, "Checkout revision", [&](){
+		rightClickMenu.add_button(theFont, "Open on GitHub", &githubSpr, [&](){
+			std::cout << "Open on GitHub\n";
+		});
+		rightClickMenu.add_button(theFont, "Checkout revision", nullptr, [&](){
 			std::cout << "Checkout revision\n";
 		});
 
@@ -573,6 +586,8 @@ class WhoDunnit{
 						}
 						break;
 					case sf::Event::MouseWheelScrolled:
+						rightClickMenu.hide();
+
 						if (! (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RControl))) {
 							// Scrolling
 							if (event.mouseWheelScroll.x < rightDividerX) {
@@ -776,6 +791,7 @@ class WhoDunnit{
 			gitLogTopBarTitleText.setPosition(rightDividerX + 7, topbarHeight + 7);
 			window.draw(gitLogTopBarTitleText);
 
+			// Gradient
 			sf::VertexArray topbarRect(sf::TriangleStrip, 4);
 			topbarRect[0].position = sf::Vector2f(0,0);
 			topbarRect[1].position = sf::Vector2f(window.getSize().x,0);
