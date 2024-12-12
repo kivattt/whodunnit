@@ -475,7 +475,9 @@ class WhoDunnit{
 
 		RightClickMenu rightClickMenu;
 		rightClickMenu.add_button(theFont, "Copy Revision Number", &clipboardSpr, [&](){
-			std::cout << "Copy Revision Number: " << theFile.selectedCommitHash << std::endl;
+			if (theFile.selectedCommitHash != "") {
+				sf::Clipboard::setString(theFile.selectedCommitHash);
+			}
 		});
 		rightClickMenu.add_button(theFont, "Open on GitHub", &githubSpr, [&](){
 			std::cout << "Open on GitHub\n";
