@@ -496,9 +496,9 @@ class WhoDunnit{
 			string url = remote + "/commit/" + theFile.selectedCommitHash;
 			int ignored = system(string("xdg-open " + sanitize_shell_argument(url)).c_str());
 		});
-		rightClickMenu.add_button(theFont, "Checkout revision", nullptr, [&](){
+		/*rightClickMenu.add_button(theFont, "Checkout revision", nullptr, [&](){
 			std::cout << "Checkout revision\n";
-		});
+		});*/
 
 		/*sf::RectangleShape topbarRect;
 		topbarRect.setPosition(0,0);

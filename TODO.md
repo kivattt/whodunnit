@@ -8,7 +8,6 @@
 - When selecting a commit from the Git Log window, scroll to the first commit on the left
 
 - Right click -> Checkout revision (like in Intellij IDEA)
-- Right click -> Open in Github (with a Github icon?) (like in Intellij IDEA)
 
 - Show number of visible/overshadowed commits somewhere
 
