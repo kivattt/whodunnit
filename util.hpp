@@ -164,4 +164,31 @@ string get_remote_url(string filename) {
 	return ret.substr(0, ret.size()-1);
 }
 
+string lowercase(string str) {
+	std::transform(str.begin(), str.end(), str.begin(), [](unsigned char c){
+		return std::tolower(c);
+	});
+
+	return str;
+}
+
+string remote_url_to_site_name(string remote) {
+	if (remote.starts_with("https://")) {
+		remote = remote.substr(string("https://").size());
+	}
+
+	if (remote.starts_with("http://")) {
+		remote = remote.substr(string("http://").size());
+	}
+
+	if (remote.starts_with("github.com")) {
+		return "GitHub";
+	}
+	if (remote.starts_with("gitlab.com")) {
+		return "GitLab";
+	}
+
+	return "Remote website";
+}
+
 #endif // UTIL_HPP

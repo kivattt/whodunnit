@@ -468,10 +468,13 @@ class WhoDunnit{
 		sf::Sprite clipboardSpr;
 		clipboardSpr.setTexture(clipboardTxt);
 
-		sf::Texture githubTxt;
-		githubTxt.loadFromFile("icons/github.png");
-		sf::Sprite githubSpr;
-		githubSpr.setTexture(githubTxt);
+		string remote = get_remote_url(filename);
+		string remoteName = remote_url_to_site_name(remote);
+
+		sf::Texture remoteTxt;
+		remoteTxt.loadFromFile("icons/" + lowercase(remoteName) + ".png");
+		sf::Sprite remoteSpr;
+		remoteSpr.setTexture(remoteTxt);
 
 		RightClickMenu rightClickMenu;
 		rightClickMenu.add_button(theFont, "Copy Revision Number", &clipboardSpr, [&](){
@@ -479,7 +482,7 @@ class WhoDunnit{
 				sf::Clipboard::setString(theFile.selectedCommitHash);
 			}
 		});
-		rightClickMenu.add_button(theFont, "Open on GitHub", &githubSpr, [&](){
+		rightClickMenu.add_button(theFont, "Open on " + remoteName, &remoteSpr, [&](){
 			string remote = get_remote_url(filename);
 			if (remote == "") {
 				return;
