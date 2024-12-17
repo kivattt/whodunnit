@@ -410,7 +410,7 @@ class WhoDunnit{
 
 	int tabIndex = 0;
 	vector <BlameFile> blameFiles;
-	BlameFile theFile;
+	BlameFile *theFile;
 
 	int leftDividerX = 190;
 	int rightDividerX = START_WIDTH - 400;
@@ -422,16 +422,16 @@ class WhoDunnit{
 		fontSizePixels = std::max(1, level);
 		fontSizePixels = std::min(100, fontSizePixels); // Going higher will use ridiculous amounts of memory
 
-		for (sf::Text &text : theFile.textLines) {
+		for (sf::Text &text : theFile->textLines) {
 			text.setCharacterSize(fontSizePixels);
 		}
-		for (sf::Text &text : theFile.authorLines) {
+		for (sf::Text &text : theFile->authorLines) {
 			text.setCharacterSize(fontSizePixels);
 		}
 
 		int size = std::max(1, fontSizePixels-1);
 		// TODO: Maybe make separate zoom for git log
-		for (CommitThing &c : theFile.commitTexts) {
+		for (CommitThing &c : theFile->commitTexts) {
 			c.authorText.setCharacterSize(size);
 			c.timeText.setCharacterSize(size);
 			c.commitHashText.setCharacterSize(size);
@@ -440,8 +440,8 @@ class WhoDunnit{
 	}
 
 	void switchToTab(sf::RenderWindow &window) {
-		theFile = blameFiles[tabIndex];
-		window.setTitle("whodunnit - " + theFile.filename);
+		theFile = &blameFiles[tabIndex];
+		window.setTitle("whodunnit - " + theFile->filename);
 	}
 
 	int run(vector<string> filenames) {
@@ -473,9 +473,9 @@ class WhoDunnit{
 		}
 
 		tabIndex = 0;
-		theFile = blameFiles[tabIndex];
+		theFile = &blameFiles[tabIndex];
 
-		sf::RenderWindow window(sf::VideoMode(START_WIDTH, START_HEIGHT), "whodunnit - " + basename(theFile.filename));
+		sf::RenderWindow window(sf::VideoMode(START_WIDTH, START_HEIGHT), "whodunnit - " + basename(theFile->filename));
 		window.setVerticalSyncEnabled(true);
 
 		sf::RectangleShape leftDividerRect;
@@ -489,7 +489,7 @@ class WhoDunnit{
 		sf::Sprite clipboardSpr;
 		clipboardSpr.setTexture(clipboardTxt);
 
-		string remote = get_remote_url(theFile.filename);
+		string remote = get_remote_url(theFile->filename);
 		string remoteName = remote_url_to_site_name(remote);
 
 		sf::Texture remoteTxt;
@@ -499,12 +499,12 @@ class WhoDunnit{
 
 		RightClickMenu rightClickMenu;
 		rightClickMenu.add_button(theFont, "Copy Revision Number", &clipboardSpr, [&](){
-			if (theFile.selectedCommitHash != "") {
-				sf::Clipboard::setString(theFile.selectedCommitHash);
+			if (theFile->selectedCommitHash != "") {
+				sf::Clipboard::setString(theFile->selectedCommitHash);
 			}
 		});
 		rightClickMenu.add_button(theFont, "Open on " + remoteName, &remoteSpr, [&](){
-			string remote = get_remote_url(theFile.filename);
+			string remote = get_remote_url(theFile->filename);
 			if (remote == "") {
 				return;
 			}
@@ -514,7 +514,7 @@ class WhoDunnit{
 			}
 
 			// Checked that it works for GitHub, Gitlab and Gitea
-			string url = remote + "/commit/" + theFile.selectedCommitHash;
+			string url = remote + "/commit/" + theFile->selectedCommitHash;
 			int ignored = system(string("xdg-open " + sanitize_shell_argument(url)).c_str());
 		});
 		/*rightClickMenu.add_button(theFont, "Checkout revision", nullptr, [&](){
@@ -522,11 +522,11 @@ class WhoDunnit{
 		});*/
 
 		auto updateGitBlame = [&]() {
-			if (! theFile.run_git_blame()) {
+			if (! theFile->run_git_blame()) {
 				std::cerr << "Failed to run git blame\n";
 				return;
 			}
-			theFile.set_texts();
+			theFile->set_texts();
 		};
 
 		int topbarHeight = 35;
@@ -583,18 +583,18 @@ class WhoDunnit{
 								window.close();
 								break;
 							case sf::Keyboard::Escape:
-								theFile.selectedCommitHash = "";
-								theFile.set_texts();
+								theFile->selectedCommitHash = "";
+								theFile->set_texts();
 								break;
 							case sf::Keyboard::Home:
 								if (ctrlDown) {
-									theFile.scrollPositionPixels = 0;
+									theFile->scrollPositionPixels = 0;
 								}
 								break;
 							case sf::Keyboard::End:
 								if (ctrlDown) {
 									float step = (fontSizePixels + fontSizePixels/2);
-									theFile.scrollPositionPixels = std::max(0, int(theFile.textLines.size() * step - window.getSize().y));
+									theFile->scrollPositionPixels = std::max(0, int(theFile->textLines.size() * step - window.getSize().y));
 								}
 								break;
 							case sf::Keyboard::Add: // The '+' key
@@ -621,7 +621,7 @@ class WhoDunnit{
 								} else {
 									tabIndex = (tabIndex + 1) % blameFiles.size();
 								}
-								theFile = blameFiles[tabIndex];
+								theFile = &blameFiles[tabIndex];
 								break;
 						}
 						break;
@@ -631,14 +631,14 @@ class WhoDunnit{
 						if (! (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RControl))) {
 							// Scrolling
 							if (event.mouseWheelScroll.x < rightDividerX) {
-								theFile.scrollPositionPixels -= event.mouseWheelScroll.delta * 60;
-								if (theFile.scrollPositionPixels < 0) {
-									theFile.scrollPositionPixels = 0;
+								theFile->scrollPositionPixels -= event.mouseWheelScroll.delta * 60;
+								if (theFile->scrollPositionPixels < 0) {
+									theFile->scrollPositionPixels = 0;
 								}
 							} else {
-								theFile.gitLogScrollPositionPixels -= event.mouseWheelScroll.delta * 60;
-								if (theFile.gitLogScrollPositionPixels < 0) {
-									theFile.gitLogScrollPositionPixels = 0;
+								theFile->gitLogScrollPositionPixels -= event.mouseWheelScroll.delta * 60;
+								if (theFile->gitLogScrollPositionPixels < 0) {
+									theFile->gitLogScrollPositionPixels = 0;
 								}
 							}
 							break;
@@ -668,30 +668,30 @@ class WhoDunnit{
 						} else if (isLeftClick && within(event.mouseButton.x, rightDividerX-15, rightDividerX+15)) {
 							movingRightDivider = true;
 						} else if (event.mouseButton.x < leftDividerX) { // Clicking a blame on the left
-							//int index = theFile.mouse_y_to_blame_line_index(event.mouseButton.y, topbarHeight);
-							int index = theFile.mouse_y_to_blame_line_index(event.mouseButton.y, topbarFullHeight);
+							//int index = theFile->mouse_y_to_blame_line_index(event.mouseButton.y, topbarHeight);
+							int index = theFile->mouse_y_to_blame_line_index(event.mouseButton.y, topbarFullHeight);
 							if (index == -1) {
-								theFile.selectedCommitHash = "";
-								theFile.set_texts();
+								theFile->selectedCommitHash = "";
+								theFile->set_texts();
 								break;
 							}
 
-							theFile.selectedCommitHash = theFile.blameLines[index].commitHash;
-							theFile.set_texts();
+							theFile->selectedCommitHash = theFile->blameLines[index].commitHash;
+							theFile->set_texts();
 							if (isRightClick) {
 								rightClickMenu.set_position(event.mouseButton.x, event.mouseButton.y);
 								rightClickMenu.show();
 							}
 						} else if (event.mouseButton.y > (topbarFullHeight) && event.mouseButton.x > rightDividerX) { // Clicking a commit (Git Log) on the right
-							int index = theFile.mouse_y_to_git_log_index(event.mouseButton.y, topbarFullHeight);
+							int index = theFile->mouse_y_to_git_log_index(event.mouseButton.y, topbarFullHeight);
 							if (index == -1) {
-								theFile.selectedCommitHash = "";
-								theFile.set_texts();
+								theFile->selectedCommitHash = "";
+								theFile->set_texts();
 								break;
 							}
 
-							theFile.selectedCommitHash = theFile.commitLog[index].commitHash;
-							theFile.set_texts();
+							theFile->selectedCommitHash = theFile->commitLog[index].commitHash;
+							theFile->set_texts();
 							if (isRightClick) {
 								rightClickMenu.set_position(event.mouseButton.x, event.mouseButton.y);
 								rightClickMenu.show();
@@ -747,33 +747,33 @@ class WhoDunnit{
 			button2.set_size(topbarHeight, topbarHeight);
 
 			float step = (fontSizePixels + fontSizePixels/2);
-			//float yOffset = theFile.scrollPositionPixels % int(step) - topbarHeight;
-			float yOffset = theFile.scrollPositionPixels % int(step) - topbarFullHeight;
-			int startIdx = std::max(0, int(std::floor(theFile.scrollPositionPixels / step)));
+			//float yOffset = theFile->scrollPositionPixels % int(step) - topbarHeight;
+			float yOffset = theFile->scrollPositionPixels % int(step) - topbarFullHeight;
+			int startIdx = std::max(0, int(std::floor(theFile->scrollPositionPixels / step)));
 
-			for (int i = startIdx; i < theFile.textLines.size(); i++) {
+			for (int i = startIdx; i < theFile->textLines.size(); i++) {
 				int iFromZero = i - startIdx;
 				float y = iFromZero * step - yOffset;
 
-				theFile.blameBgs[i].setSize(sf::Vector2f(leftDividerX, step));
-				theFile.blameBgs[i].setPosition(0, y);
-				window.draw(theFile.blameBgs[i]);
+				theFile->blameBgs[i].setSize(sf::Vector2f(leftDividerX, step));
+				theFile->blameBgs[i].setPosition(0, y);
+				window.draw(theFile->blameBgs[i]);
 
-				theFile.authorLines[i].setPosition(0, y);
-				window.draw(theFile.authorLines[i]);
+				theFile->authorLines[i].setPosition(0, y);
+				window.draw(theFile->authorLines[i]);
 
 				sf::RectangleShape rect;
 				rect.setSize(sf::Vector2f(window.getSize().x, step));
 				rect.setPosition(leftDividerX+2, y);
-				sf::Color c = theFile.blameBgs[i].getFillColor();
+				sf::Color c = theFile->blameBgs[i].getFillColor();
 				c.r /= 5;
 				c.g /= 5;
 				c.b /= 5;
 				rect.setFillColor(c);
 				window.draw(rect);
 
-				theFile.textLines[i].setPosition(leftDividerX+10, y);
-				window.draw(theFile.textLines[i]);
+				theFile->textLines[i].setPosition(leftDividerX+10, y);
+				window.draw(theFile->textLines[i]);
 
 				if (y + step > window.getSize().y) {
 					break;
@@ -787,35 +787,35 @@ class WhoDunnit{
 			window.draw(gitLogBGRect);
 
 			float gitLogStep = (float)fontSizePixels * 1.3;
-			//float gitLogYOffset = theFile.gitLogScrollPositionPixels % int(gitLogStep) - topbarHeight - secondTopBarHeight;
-			float gitLogYOffset = theFile.gitLogScrollPositionPixels % int(gitLogStep) - topbarFullHeight;
-			int gitLogStartIdx = std::max(0, int(std::floor(theFile.gitLogScrollPositionPixels / gitLogStep)));
-			for (int i = gitLogStartIdx; i < theFile.commitTexts.size(); i++) {
+			//float gitLogYOffset = theFile->gitLogScrollPositionPixels % int(gitLogStep) - topbarHeight - secondTopBarHeight;
+			float gitLogYOffset = theFile->gitLogScrollPositionPixels % int(gitLogStep) - topbarFullHeight;
+			int gitLogStartIdx = std::max(0, int(std::floor(theFile->gitLogScrollPositionPixels / gitLogStep)));
+			for (int i = gitLogStartIdx; i < theFile->commitTexts.size(); i++) {
 				int iFromZero = i - gitLogStartIdx;
 				float x = rightDividerX+5;
 				int y = iFromZero * gitLogStep - gitLogYOffset;
 
-				theFile.gitLogBgs[i].setSize(sf::Vector2f(window.getSize().x - rightDividerX, gitLogStep));
+				theFile->gitLogBgs[i].setSize(sf::Vector2f(window.getSize().x - rightDividerX, gitLogStep));
 
-				auto &e = theFile.commitTexts[i];
+				auto &e = theFile->commitTexts[i];
 
-				theFile.gitLogBgs[i].setPosition(rightDividerX, y);
-				window.draw(theFile.gitLogBgs[i]);
+				theFile->gitLogBgs[i].setPosition(rightDividerX, y);
+				window.draw(theFile->gitLogBgs[i]);
 				e.timeText.setPosition(x,y);
 				window.draw(e.timeText);
 
-				theFile.gitLogBgs[i].setPosition(rightDividerX+100, y);
-				window.draw(theFile.gitLogBgs[i]);
+				theFile->gitLogBgs[i].setPosition(rightDividerX+100, y);
+				window.draw(theFile->gitLogBgs[i]);
 				e.authorText.setPosition(x+100,y);
 				window.draw(e.authorText);
 
-				//theFile.gitLogBgs[i].setPosition(rightDividerX, y);
-				//window.draw(theFile.gitLogBgs[i]);
+				//theFile->gitLogBgs[i].setPosition(rightDividerX, y);
+				//window.draw(theFile->gitLogBgs[i]);
 				//e.commitHashText.setPosition(x,y);
 				//window.draw(e.commitHashText);
 
-				theFile.gitLogBgs[i].setPosition(rightDividerX+220, y);
-				window.draw(theFile.gitLogBgs[i]);
+				theFile->gitLogBgs[i].setPosition(rightDividerX+220, y);
+				window.draw(theFile->gitLogBgs[i]);
 				e.titleText.setPosition(x+220,y);
 				window.draw(e.titleText);
 
