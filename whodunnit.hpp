@@ -141,7 +141,7 @@ struct BlameFile {
 			text.setFillColor(genericTextColor);
 			textLines.push_back(text);
 
-			text.setFont(monospaceFont);
+			text.setFont(interFont);
 			text.setString(sf::String::fromUtf8(e.author.begin(), e.author.end()));
 			text.setCharacterSize(fontSizePixels);
 
@@ -177,10 +177,10 @@ struct BlameFile {
 		for (Commit &c : commitLog) {
 			++i;
 			CommitThing thing;
-			thing.authorText.setFont(monospaceFont);
+			thing.authorText.setFont(interFont);
 			thing.timeText.setFont(monospaceFont);
 			thing.commitHashText.setFont(monospaceFont);
-			thing.titleText.setFont(monospaceFont);
+			thing.titleText.setFont(interFont);
 
 			int size = std::max(1, fontSizePixels-1);
 			thing.authorText.setCharacterSize(size);
@@ -747,7 +747,7 @@ class WhoDunnit{
 				}
 			}
 
-			window.clear(sf::Color(10,10,10));
+			window.clear(backgroundColor);
 
 			button1.set_size(topbarHeight, topbarHeight);
 			button2.set_size(topbarHeight, topbarHeight);
@@ -765,7 +765,7 @@ class WhoDunnit{
 				theFile->blameBgs[i].setPosition(0, y);
 				window.draw(theFile->blameBgs[i]);
 
-				theFile->authorLines[i].setPosition(0, y);
+				theFile->authorLines[i].setPosition(2, y);
 				window.draw(theFile->authorLines[i]);
 
 				sf::RectangleShape rect;
@@ -851,16 +851,14 @@ class WhoDunnit{
 			int currentTabXOffset = leftDividerX;
 			const int tabPaddingX = 10;
 			for (int i = 0; i < blameFiles.size(); i++) {
-				BlameFile &f = blameFiles[i];
-
 				sf::Text text;
 				text.setFont(interFont);
-				text.setString(basename(f.filename));
+				text.setString(basename(blameFiles[i].filename));
 				text.setPosition(currentTabXOffset + tabPaddingX, topbarHeight + 7);
 				text.setCharacterSize(13);
 
 				sf::RectangleShape highlightRect;
-				highlightRect.setFillColor(sf::Color(100,120,200));
+				highlightRect.setFillColor(tabHighlightColor);
 
 				sf::RectangleShape backgroundRect;
 				backgroundRect.setFillColor(tabIndex == i ? sf::Color(30,30,40) : sf::Color(0,0,0));
@@ -905,8 +903,8 @@ class WhoDunnit{
 
 			topbarRect[0].color = sf::Color(50,50,50);
 			topbarRect[2].color = sf::Color(50,50,50);
-			topbarRect[1].color = sf::Color(10,10,10);
-			topbarRect[3].color = sf::Color(10,10,10);
+			topbarRect[1].color = backgroundColor;
+			topbarRect[3].color = backgroundColor;
 
 			sf::RectangleShape topbarDivider;
 			topbarDivider.setPosition(0,topbarHeight-1);
