@@ -29,7 +29,8 @@
 using std::string;
 using std::vector;
 
-sf::Font theFont;
+sf::Font monospaceFont;
+sf::Font interFont;
 int fontSizePixels = 15;
 
 struct BlameLine {
@@ -133,14 +134,14 @@ struct BlameFile {
 			commitsInBlame[e.commitHash] = true;
 
 			sf::Text text;
-			text.setFont(theFont);
+			text.setFont(monospaceFont);
 			text.setString(sf::String::fromUtf8(e.line.begin(), e.line.end()));
 			text.setCharacterSize(fontSizePixels);
 			//text.setFillColor(sf::Color(200,200,200));
 			text.setFillColor(genericTextColor);
 			textLines.push_back(text);
 
-			text.setFont(theFont);
+			text.setFont(monospaceFont);
 			text.setString(sf::String::fromUtf8(e.author.begin(), e.author.end()));
 			text.setCharacterSize(fontSizePixels);
 
@@ -176,10 +177,10 @@ struct BlameFile {
 		for (Commit &c : commitLog) {
 			++i;
 			CommitThing thing;
-			thing.authorText.setFont(theFont);
-			thing.timeText.setFont(theFont);
-			thing.commitHashText.setFont(theFont);
-			thing.titleText.setFont(theFont);
+			thing.authorText.setFont(monospaceFont);
+			thing.timeText.setFont(monospaceFont);
+			thing.commitHashText.setFont(monospaceFont);
+			thing.titleText.setFont(monospaceFont);
 
 			int size = std::max(1, fontSizePixels-1);
 			thing.authorText.setCharacterSize(size);
@@ -449,8 +450,13 @@ class WhoDunnit{
 			return 1;
 		}
 
-		if (! theFont.loadFromFile("fonts/JetBrainsMono-Regular.ttf")) {
-			std::cerr << "Failed to load font at fonts/JetBrainsMono-Regular.ttf";
+		if (! monospaceFont.loadFromFile("fonts/JetBrainsMono-Regular/JetBrainsMono-Regular.ttf")) {
+			std::cerr << "Failed to load font at fonts/JetBrainsMono-Regular/JetBrainsMono-Regular.ttf";
+			return 1;
+		}
+
+		if (! interFont.loadFromFile("fonts/Inter/Inter-Regular.ttf")) {
+			std::cerr << "Failed to load font at fonts/Inter/Inter-Regular.ttf";
 			return 1;
 		}
 
@@ -498,12 +504,12 @@ class WhoDunnit{
 		remoteSpr.setTexture(remoteTxt);
 
 		RightClickMenu rightClickMenu;
-		rightClickMenu.add_button(theFont, "Copy Revision Number", &clipboardSpr, [&](){
+		rightClickMenu.add_button(monospaceFont, "Copy Revision Number", &clipboardSpr, [&](){
 			if (theFile->selectedCommitHash != "") {
 				sf::Clipboard::setString(theFile->selectedCommitHash);
 			}
 		});
-		rightClickMenu.add_button(theFont, "Open on " + remoteName, &remoteSpr, [&](){
+		rightClickMenu.add_button(monospaceFont, "Open on " + remoteName, &remoteSpr, [&](){
 			string remote = get_remote_url(theFile->filename);
 			if (remote == "") {
 				return;
@@ -517,7 +523,7 @@ class WhoDunnit{
 			string url = remote + "/commit/" + theFile->selectedCommitHash;
 			int ignored = system(string("xdg-open " + sanitize_shell_argument(url)).c_str());
 		});
-		/*rightClickMenu.add_button(theFont, "Checkout revision", nullptr, [&](){
+		/*rightClickMenu.add_button(monospaceFont, "Checkout revision", nullptr, [&](){
 			std::cout << "Checkout revision\n";
 		});*/
 
@@ -534,17 +540,17 @@ class WhoDunnit{
 		int topbarFullHeight = topbarHeight + secondTopBarHeight;
 
 		sf::Text gitLogTopBarTitleText;
-		gitLogTopBarTitleText.setFont(theFont);
+		gitLogTopBarTitleText.setFont(monospaceFont);
 		gitLogTopBarTitleText.setString("Git Log");
 		gitLogTopBarTitleText.setFillColor(paneTitleTextColor);
 
 		float h = topbarHeight;
-		Button button1({0,0}, {h,h}, theFont, "<");
+		Button button1({0,0}, {h,h}, monospaceFont, "<");
 		button1.set_on_click([&](){
 			updateGitBlame();
 		});
 
-		Button button2({h,0}, {h,h}, theFont, ">");
+		Button button2({h,0}, {h,h}, monospaceFont, ">");
 		button2.set_on_click([&](){
 			updateGitBlame();
 		});
@@ -848,10 +854,13 @@ class WhoDunnit{
 				BlameFile &f = blameFiles[i];
 
 				sf::Text text;
-				text.setFont(theFont);
+				text.setFont(interFont);
 				text.setString(basename(f.filename));
 				text.setPosition(currentTabXOffset + tabPaddingX, topbarHeight + 7);
 				text.setCharacterSize(13);
+
+				sf::RectangleShape highlightRect;
+				highlightRect.setFillColor(sf::Color(100,120,200));
 
 				sf::RectangleShape backgroundRect;
 				backgroundRect.setFillColor(tabIndex == i ? sf::Color(30,30,40) : sf::Color(0,0,0));
@@ -859,10 +868,15 @@ class WhoDunnit{
 				int lastCurrentTabXOffset = currentTabXOffset;
 				currentTabXOffset += text.getGlobalBounds().width + 2*tabPaddingX;
 
+				highlightRect.setPosition(currentTabXOffset, topbarFullHeight - 1 - 2);
+				highlightRect.setSize(sf::Vector2f(lastCurrentTabXOffset - currentTabXOffset + 2, 2));
 				backgroundRect.setPosition(currentTabXOffset, topbarHeight);
 				backgroundRect.setSize(sf::Vector2f(lastCurrentTabXOffset - currentTabXOffset + 2, secondTopBarHeight - 1));
 
 				window.draw(backgroundRect);
+				if (tabIndex == i) {
+					window.draw(highlightRect);
+				}
 				window.draw(text);
 
 				sf::RectangleShape vertDividerRect;
