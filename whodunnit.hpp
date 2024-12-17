@@ -25,6 +25,7 @@
 #define START_HEIGHT 720
 #define LEFT_DIVIDER_FROM_RIGHT 100
 #define LEFT_DIVIDER_FROM_LEFT 100
+#define GIT_LOG_ENTRY_HEIGHT_MULTIPLIER 1.3
 
 using std::string;
 using std::vector;
@@ -105,7 +106,7 @@ struct BlameFile {
 	// Returns -1 on error
 	// FIXME: Doesn't work, also fix scrolling for the Git Log window
 	int mouse_y_to_git_log_index(float mouseY, int topbarHeight) {
-		float gitLogStep = (float)fontSizePixels * 1.3;
+		float gitLogStep = (float)fontSizePixels * GIT_LOG_ENTRY_HEIGHT_MULTIPLIER;
 		float gitLogYOffset = gitLogScrollPositionPixels % int(gitLogStep) - topbarHeight;
 		int startIdx = std::max(0, int(std::floor(gitLogScrollPositionPixels / gitLogStep)));
 
@@ -612,7 +613,7 @@ class WhoDunnit{
 									zoom(fontSizePixels - 1);
 								}
 								break;
-							case sf::Keyboard::Tab:
+							case sf::Keyboard::Tab: // Switching tabs
 								if (! (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RControl))) {
 									break;
 								}
@@ -626,6 +627,7 @@ class WhoDunnit{
 									tabIndex = (tabIndex + 1) % blameFiles.size();
 								}
 								theFile = &blameFiles[tabIndex];
+								zoom(fontSizePixels); // To update the font sizes
 								break;
 						}
 						break;
@@ -784,11 +786,11 @@ class WhoDunnit{
 				}
 			}
 
-			sf::RectangleShape topBarFullRect;
-			topBarFullRect.setPosition(0, topbarHeight);
-			topBarFullRect.setSize(sf::Vector2f(window.getSize().x, secondTopBarHeight));
-			topBarFullRect.setFillColor(gitLogBackgroundColor);
-			window.draw(topBarFullRect);
+			sf::RectangleShape topBarTabsRect;
+			topBarTabsRect.setPosition(0, topbarHeight);
+			topBarTabsRect.setSize(sf::Vector2f(window.getSize().x, secondTopBarHeight));
+			topBarTabsRect.setFillColor(gitLogBackgroundColor);
+			window.draw(topBarTabsRect);
 
 			int currentTabXOffset = leftDividerX;
 			const int tabPaddingX = 10;
@@ -829,46 +831,61 @@ class WhoDunnit{
 			sf::RectangleShape gitLogBGRect;
 			gitLogBGRect.setPosition(rightDividerX, 0);
 			gitLogBGRect.setSize(sf::Vector2f(window.getSize().x - rightDividerX, window.getSize().y));
-			gitLogBGRect.setFillColor(gitLogBackgroundColor);
+			gitLogBGRect.setFillColor(backgroundColor);
 			window.draw(gitLogBGRect);
 
 			float gitLogStep = (float)fontSizePixels * 1.3;
-			//float gitLogYOffset = theFile->gitLogScrollPositionPixels % int(gitLogStep) - topbarHeight - secondTopBarHeight;
 			float gitLogYOffset = theFile->gitLogScrollPositionPixels % int(gitLogStep) - topbarFullHeight;
 			int gitLogStartIdx = std::max(0, int(std::floor(theFile->gitLogScrollPositionPixels / gitLogStep)));
 			for (int i = gitLogStartIdx; i < theFile->commitTexts.size(); i++) {
 				int iFromZero = i - gitLogStartIdx;
 				float x = rightDividerX+5;
 				int y = iFromZero * gitLogStep - gitLogYOffset;
+				int textY = y + 2;
+				if (fontSizePixels < 8) {
+					textY = y;
+				}
 
-				theFile->gitLogBgs[i].setSize(sf::Vector2f(window.getSize().x - rightDividerX, gitLogStep));
+				theFile->gitLogBgs[i].setSize(sf::Vector2f(window.getSize().x - rightDividerX, std::ceil(gitLogStep)));
 
 				auto &e = theFile->commitTexts[i];
 
 				theFile->gitLogBgs[i].setPosition(rightDividerX, y);
 				window.draw(theFile->gitLogBgs[i]);
-				e.timeText.setPosition(x,y);
+				e.timeText.setPosition(x,textY);
 				window.draw(e.timeText);
 
 				theFile->gitLogBgs[i].setPosition(rightDividerX+100, y);
 				window.draw(theFile->gitLogBgs[i]);
-				e.authorText.setPosition(x+100,y);
+				e.authorText.setPosition(x+100,textY);
 				window.draw(e.authorText);
 
 				//theFile->gitLogBgs[i].setPosition(rightDividerX, y);
 				//window.draw(theFile->gitLogBgs[i]);
-				//e.commitHashText.setPosition(x,y);
+				//e.commitHashText.setPosition(x,textY);
 				//window.draw(e.commitHashText);
 
 				theFile->gitLogBgs[i].setPosition(rightDividerX+220, y);
 				window.draw(theFile->gitLogBgs[i]);
-				e.titleText.setPosition(x+220,y);
+				e.titleText.setPosition(x+220,textY);
 				window.draw(e.titleText);
+
+				sf::RectangleShape bgLineRect;
+				bgLineRect.setPosition(rightDividerX, y);
+				bgLineRect.setSize(sf::Vector2f(window.getSize().x - rightDividerX, 1));
+				bgLineRect.setFillColor(backgroundColor);
+				window.draw(bgLineRect);
 
 				if (y + gitLogStep > window.getSize().y) {
 					break;
 				}
 			}
+
+			sf::RectangleShape topBarGitLogRect;
+			topBarGitLogRect.setPosition(rightDividerX, topbarHeight);
+			topBarGitLogRect.setSize(sf::Vector2f(window.getSize().x - rightDividerX, secondTopBarHeight));
+			topBarGitLogRect.setFillColor(gitLogBackgroundColor);
+			window.draw(topBarGitLogRect);
 
 			sf::RectangleShape topBarFullDivider;
 			topBarFullDivider.setPosition(0,topbarFullHeight-1);
@@ -913,11 +930,9 @@ class WhoDunnit{
 			window.draw(topbarDivider);
 
 			leftDividerRect.setSize(sf::Vector2f(2, window.getSize().y));
-			//leftDividerRect.setPosition(leftDividerX, topbarHeight);
 			leftDividerRect.setPosition(leftDividerX, topbarFullHeight);
 
 			rightDividerRect.setSize(sf::Vector2f(2, window.getSize().y));
-			//rightDividerRect.setPosition(rightDividerX, topbarHeight);
 			rightDividerRect.setPosition(rightDividerX, topbarFullHeight);
 
 			window.draw(leftDividerRect);
