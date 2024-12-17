@@ -318,7 +318,7 @@ struct BlameFile {
 
 		auto end = std::chrono::high_resolution_clock::now();
 		auto msInt = std::chrono::duration_cast<std::chrono::milliseconds>(end-start);
-		std::cout << "Git blame time: " << msInt.count() << "ms" << std::endl;
+		std::cout << "Git blame took " << msInt.count() << "ms for " << basename(filename) << std::endl;
 
 		if (chdir(previousDirName) == -1) {
 			free(previousDirName);
@@ -390,8 +390,6 @@ struct BlameFile {
 				continue;
 			}
 		}
-
-		std::cout << "newest: " << newestCommitHash << '\n';
 
 		// Delete the temp file
 		unlink(tempFilename);
@@ -786,6 +784,48 @@ class WhoDunnit{
 				}
 			}
 
+			sf::RectangleShape topBarFullRect;
+			topBarFullRect.setPosition(0, topbarHeight);
+			topBarFullRect.setSize(sf::Vector2f(window.getSize().x, secondTopBarHeight));
+			topBarFullRect.setFillColor(gitLogBackgroundColor);
+			window.draw(topBarFullRect);
+
+			int currentTabXOffset = leftDividerX;
+			const int tabPaddingX = 10;
+			for (int i = 0; i < blameFiles.size(); i++) {
+				sf::Text text;
+				text.setFont(interFont);
+				text.setString(basename(blameFiles[i].filename));
+				text.setPosition(currentTabXOffset + tabPaddingX, topbarHeight + 7);
+				text.setCharacterSize(13);
+
+				sf::RectangleShape highlightRect;
+				highlightRect.setFillColor(tabHighlightColor);
+
+				sf::RectangleShape backgroundRect;
+				backgroundRect.setFillColor(tabIndex == i ? sf::Color(30,30,40) : sf::Color(0,0,0));
+
+				int lastCurrentTabXOffset = currentTabXOffset;
+				currentTabXOffset += text.getGlobalBounds().width + 2*tabPaddingX;
+
+				highlightRect.setPosition(currentTabXOffset, topbarFullHeight - 1 - 2);
+				highlightRect.setSize(sf::Vector2f(lastCurrentTabXOffset - currentTabXOffset + 2, 2));
+				backgroundRect.setPosition(currentTabXOffset, topbarHeight);
+				backgroundRect.setSize(sf::Vector2f(lastCurrentTabXOffset - currentTabXOffset + 2, secondTopBarHeight - 1));
+
+				window.draw(backgroundRect);
+				if (tabIndex == i) {
+					window.draw(highlightRect);
+				}
+				window.draw(text);
+
+				sf::RectangleShape vertDividerRect;
+				vertDividerRect.setPosition(currentTabXOffset, topbarHeight);
+				vertDividerRect.setSize(sf::Vector2f(2, secondTopBarHeight));
+				vertDividerRect.setFillColor(dividerColor); // TODO: Change to lower brightness?
+				window.draw(vertDividerRect);
+			}
+
 			sf::RectangleShape gitLogBGRect;
 			gitLogBGRect.setPosition(rightDividerX, 0);
 			gitLogBGRect.setSize(sf::Vector2f(window.getSize().x - rightDividerX, window.getSize().y));
@@ -830,12 +870,6 @@ class WhoDunnit{
 				}
 			}
 
-			sf::RectangleShape topBarFullRect;
-			topBarFullRect.setPosition(0, topbarHeight);
-			topBarFullRect.setSize(sf::Vector2f(window.getSize().x, secondTopBarHeight));
-			topBarFullRect.setFillColor(gitLogBackgroundColor);
-			window.draw(topBarFullRect);
-
 			sf::RectangleShape topBarFullDivider;
 			topBarFullDivider.setPosition(0,topbarFullHeight-1);
 			topBarFullDivider.setSize(sf::Vector2f(window.getSize().x, 1));
@@ -847,42 +881,6 @@ class WhoDunnit{
 			leftVertDividerRect.setSize(sf::Vector2f(2, secondTopBarHeight));
 			leftVertDividerRect.setFillColor(dividerColor);
 			window.draw(leftVertDividerRect);
-
-			int currentTabXOffset = leftDividerX;
-			const int tabPaddingX = 10;
-			for (int i = 0; i < blameFiles.size(); i++) {
-				sf::Text text;
-				text.setFont(interFont);
-				text.setString(basename(blameFiles[i].filename));
-				text.setPosition(currentTabXOffset + tabPaddingX, topbarHeight + 7);
-				text.setCharacterSize(13);
-
-				sf::RectangleShape highlightRect;
-				highlightRect.setFillColor(tabHighlightColor);
-
-				sf::RectangleShape backgroundRect;
-				backgroundRect.setFillColor(tabIndex == i ? sf::Color(30,30,40) : sf::Color(0,0,0));
-
-				int lastCurrentTabXOffset = currentTabXOffset;
-				currentTabXOffset += text.getGlobalBounds().width + 2*tabPaddingX;
-
-				highlightRect.setPosition(currentTabXOffset, topbarFullHeight - 1 - 2);
-				highlightRect.setSize(sf::Vector2f(lastCurrentTabXOffset - currentTabXOffset + 2, 2));
-				backgroundRect.setPosition(currentTabXOffset, topbarHeight);
-				backgroundRect.setSize(sf::Vector2f(lastCurrentTabXOffset - currentTabXOffset + 2, secondTopBarHeight - 1));
-
-				window.draw(backgroundRect);
-				if (tabIndex == i) {
-					window.draw(highlightRect);
-				}
-				window.draw(text);
-
-				sf::RectangleShape vertDividerRect;
-				vertDividerRect.setPosition(currentTabXOffset, topbarHeight);
-				vertDividerRect.setSize(sf::Vector2f(2, secondTopBarHeight));
-				vertDividerRect.setFillColor(dividerColor); // TODO: Change to lower brightness?
-				window.draw(vertDividerRect);
-			}
 
 			sf::RectangleShape gitLogVertDividerRect;
 			gitLogVertDividerRect.setPosition(rightDividerX, topbarHeight);
