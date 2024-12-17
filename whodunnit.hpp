@@ -56,6 +56,7 @@ struct CommitThing {
 };
 
 struct BlameFile {
+	string filename = "";
 	vector<BlameLine> blameLines;
 	vector<Commit> commitLog;
 	vector<CommitThing> commitTexts;
@@ -65,6 +66,10 @@ struct BlameFile {
 	string newestCommitHash = "";
 
 	string selectedCommitHash = "";
+	
+	void set_filename(string newFilename) {
+		filename = newFilename;
+	}
 
 	double committer_time_0_to_1(unsigned long long committerTime) {
 		double zeroToOne = double(committerTime - oldestCommitterTime) / double(newestCommitterTime - oldestCommitterTime);
@@ -98,9 +103,9 @@ struct BlameFile {
 
 	// Returns -1 on error
 	// FIXME: Doesn't work, also fix scrolling for the Git Log window
-	int mouse_y_to_git_log_index(float mouseY, int topbarHeight, int gitLogTopBarHeight) {
+	int mouse_y_to_git_log_index(float mouseY, int topbarHeight) {
 		float gitLogStep = (float)fontSizePixels * 1.3;
-		float gitLogYOffset = gitLogScrollPositionPixels % int(gitLogStep) - topbarHeight - gitLogTopBarHeight;
+		float gitLogYOffset = gitLogScrollPositionPixels % int(gitLogStep) - topbarHeight;
 		int startIdx = std::max(0, int(std::floor(gitLogScrollPositionPixels / gitLogStep)));
 
 		int ret = startIdx + (mouseY + gitLogYOffset) / gitLogStep;
@@ -131,7 +136,8 @@ struct BlameFile {
 			text.setFont(theFont);
 			text.setString(sf::String::fromUtf8(e.line.begin(), e.line.end()));
 			text.setCharacterSize(fontSizePixels);
-			text.setFillColor(sf::Color(200,200,200));
+			//text.setFillColor(sf::Color(200,200,200));
+			text.setFillColor(genericTextColor);
 			textLines.push_back(text);
 
 			text.setFont(theFont);
@@ -158,7 +164,7 @@ struct BlameFile {
 				rect.setFillColor(hsv_to_rgb(200, 0.60, 0.65));
 			} else if (e.commitHash == newestCommitHash) {
 				//rect.setFillColor(hsv_to_rgb(130, 0.50, 1 - 0.3));
-				rect.setFillColor(hsv_to_rgb(130, 0.50, 0.4));
+				rect.setFillColor(latestCommitColor);
 			} else {
 				double zeroToOne = committer_time_0_to_1(e.committerTime);
 				rect.setFillColor(hsv_to_rgb(221, zeroToOne*0.65, 0.7d * (0.3 + zeroToOne * (1 - 0.3))));
@@ -181,7 +187,7 @@ struct BlameFile {
 			thing.commitHashText.setCharacterSize(size);
 			thing.titleText.setCharacterSize(size);
 
-			sf::Color textColor = commitsInBlame.contains(c.commitHash) ? gitLogTextColor : gitLogTextColorDarker;
+			sf::Color textColor = commitsInBlame.contains(c.commitHash) ? genericTextColor : gitLogTextColorDarker;
 			thing.authorText.setFillColor(textColor);
 			thing.timeText.setFillColor(textColor);
 			thing.commitHashText.setFillColor(textColor);
@@ -205,7 +211,7 @@ struct BlameFile {
 	}
 
 	// Returns false on failure
-	bool run_git_log(string filename) {
+	bool run_git_log() {
 		char tempFilename[] = "/tmp/whodunnit-XXXXXX";
 		int fd = mkstemp(tempFilename);
 		if (fd == -1) {
@@ -272,7 +278,7 @@ struct BlameFile {
 
 	// Run git blame on filename, with known revisions from commitLog
 	// Returns false on failure
-	bool run_git_blame(string filename) {
+	bool run_git_blame() {
 		auto start = std::chrono::high_resolution_clock::now();
 
 		char tempFilename[] = "/tmp/whodunnit-XXXXXX";
@@ -402,12 +408,16 @@ struct BlameFile {
 class WhoDunnit{
 	public:
 
+	int tabIndex = 0;
+	vector <BlameFile> blameFiles;
+	BlameFile theFile;
+
 	int leftDividerX = 190;
 	int rightDividerX = START_WIDTH - 400;
 	bool movingLeftDivider = false;
 	bool movingRightDivider = false;
 
-	void zoom(int level, BlameFile &theFile) {
+	void zoom(int level) {
 		// TODO: Make it logarithmic or whatever so the zoom feels intuitive
 		fontSizePixels = std::max(1, level);
 		fontSizePixels = std::min(100, fontSizePixels); // Going higher will use ridiculous amounts of memory
@@ -429,32 +439,43 @@ class WhoDunnit{
 		}
 	}
 
-	int run(string filename) {
-		BlameFile theFile;
-		if (! theFile.run_git_log(filename)) {
-			std::cerr << "Failed to run git log\n";
-			return 1;
-		}
+	void switchToTab(sf::RenderWindow &window) {
+		theFile = blameFiles[tabIndex];
+		window.setTitle("whodunnit - " + theFile.filename);
+	}
 
-		if (! theFile.run_git_blame(filename)) {
-			std::cerr << "Failed to run git blame\n";
+	int run(vector<string> filenames) {
+		if (filenames.empty()) {
 			return 1;
 		}
-		/*std::optional<BlameFile> blameFile = run_git_blame(filename, {});
-		if (! blameFile) {
-			std::cerr << "Failed to run git blame\n";
-			return 1;
-		}*/
 
 		if (! theFont.loadFromFile("fonts/JetBrainsMono-Regular.ttf")) {
 			std::cerr << "Failed to load font at fonts/JetBrainsMono-Regular.ttf";
 			return 1;
 		}
 
-		//BlameFile theFile = blameFile.value();
-		theFile.set_texts();
+		for (string &filename : filenames) {
+			BlameFile b;
+			b.set_filename(filename);
 
-		sf::RenderWindow window(sf::VideoMode(START_WIDTH, START_HEIGHT), "whodunnit - " + basename(filename));
+			if (! b.run_git_log()) {
+				std::cerr << "Failed to run git log\n";
+				return 1;
+			}
+
+			if (! b.run_git_blame()) {
+				std::cerr << "Failed to run git blame\n";
+				return 1;
+			}
+
+			b.set_texts();
+			blameFiles.push_back(b);
+		}
+
+		tabIndex = 0;
+		theFile = blameFiles[tabIndex];
+
+		sf::RenderWindow window(sf::VideoMode(START_WIDTH, START_HEIGHT), "whodunnit - " + basename(theFile.filename));
 		window.setVerticalSyncEnabled(true);
 
 		sf::RectangleShape leftDividerRect;
@@ -468,7 +489,7 @@ class WhoDunnit{
 		sf::Sprite clipboardSpr;
 		clipboardSpr.setTexture(clipboardTxt);
 
-		string remote = get_remote_url(filename);
+		string remote = get_remote_url(theFile.filename);
 		string remoteName = remote_url_to_site_name(remote);
 
 		sf::Texture remoteTxt;
@@ -483,7 +504,7 @@ class WhoDunnit{
 			}
 		});
 		rightClickMenu.add_button(theFont, "Open on " + remoteName, &remoteSpr, [&](){
-			string remote = get_remote_url(filename);
+			string remote = get_remote_url(theFile.filename);
 			if (remote == "") {
 				return;
 			}
@@ -500,29 +521,17 @@ class WhoDunnit{
 			std::cout << "Checkout revision\n";
 		});*/
 
-		/*sf::RectangleShape topbarRect;
-		topbarRect.setPosition(0,0);
-		topbarRect.setSize(sf::Vector2f(window.getSize().x, topbarHeight));
-		topbarRect.setFillColor(sf::Color(160,160,160));*/
-
 		auto updateGitBlame = [&]() {
-			if (! theFile.run_git_blame(filename)) {
+			if (! theFile.run_git_blame()) {
 				std::cerr << "Failed to run git blame\n";
 				return;
 			}
-			/*std::optional<BlameFile> blameFile = run_git_blame(filename, theFile.ignoreRevsList);
-			if (! blameFile) {
-				std::cerr << "Failed to run git blame\n";
-				return;
-			}*/
-			//int lastScrollPositionPixels = theFile.scrollPositionPixels;
-			//theFile = blameFile.value();
-			//theFile.scrollPositionPixels = lastScrollPositionPixels;
 			theFile.set_texts();
 		};
 
 		int topbarHeight = 35;
-		int gitLogTopBarHeight = 31;
+		int secondTopBarHeight = 31;
+		int topbarFullHeight = topbarHeight + secondTopBarHeight;
 
 		sf::Text gitLogTopBarTitleText;
 		gitLogTopBarTitleText.setFont(theFont);
@@ -591,13 +600,28 @@ class WhoDunnit{
 							case sf::Keyboard::Add: // The '+' key
 							case sf::Keyboard::Unknown: // My '+' key isn't recognized, and we don't have event.key.scancode in SFML 2.5.1
 								if (ctrlDown) {
-									zoom(fontSizePixels + 1, theFile);
+									zoom(fontSizePixels + 1);
 								}
 								break;
 							case sf::Keyboard::Hyphen: // The '-' key
 								if (ctrlDown) {
-									zoom(fontSizePixels - 1, theFile);
+									zoom(fontSizePixels - 1);
 								}
+								break;
+							case sf::Keyboard::Tab:
+								if (! (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RControl))) {
+									break;
+								}
+
+								if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LShift) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RShift)) {
+									--tabIndex;
+									if (tabIndex < 0) {
+										tabIndex = std::max(0, (int)blameFiles.size() - 1);
+									}
+								} else {
+									tabIndex = (tabIndex + 1) % blameFiles.size();
+								}
+								theFile = blameFiles[tabIndex];
 								break;
 						}
 						break;
@@ -621,7 +645,7 @@ class WhoDunnit{
 						}
 
 						// Zooming
-						zoom(fontSizePixels + event.mouseWheelScroll.delta, theFile);
+						zoom(fontSizePixels + event.mouseWheelScroll.delta);
 						break;
 					case sf::Event::MouseButtonPressed:
 						{
@@ -634,7 +658,8 @@ class WhoDunnit{
 
 						rightClickMenu.hide();
 						
-						if (event.mouseButton.y <= topbarHeight) {
+						//if (event.mouseButton.y <= topbarHeight) {
+						if (event.mouseButton.y <= topbarFullHeight) {
 							break;
 						}
 
@@ -643,7 +668,8 @@ class WhoDunnit{
 						} else if (isLeftClick && within(event.mouseButton.x, rightDividerX-15, rightDividerX+15)) {
 							movingRightDivider = true;
 						} else if (event.mouseButton.x < leftDividerX) { // Clicking a blame on the left
-							int index = theFile.mouse_y_to_blame_line_index(event.mouseButton.y, topbarHeight);
+							//int index = theFile.mouse_y_to_blame_line_index(event.mouseButton.y, topbarHeight);
+							int index = theFile.mouse_y_to_blame_line_index(event.mouseButton.y, topbarFullHeight);
 							if (index == -1) {
 								theFile.selectedCommitHash = "";
 								theFile.set_texts();
@@ -656,8 +682,8 @@ class WhoDunnit{
 								rightClickMenu.set_position(event.mouseButton.x, event.mouseButton.y);
 								rightClickMenu.show();
 							}
-						} else if (event.mouseButton.y > (topbarHeight + gitLogTopBarHeight) && event.mouseButton.x > rightDividerX) { // Clicking a commit (Git Log) on the right
-							int index = theFile.mouse_y_to_git_log_index(event.mouseButton.y, topbarHeight, gitLogTopBarHeight);
+						} else if (event.mouseButton.y > (topbarFullHeight) && event.mouseButton.x > rightDividerX) { // Clicking a commit (Git Log) on the right
+							int index = theFile.mouse_y_to_git_log_index(event.mouseButton.y, topbarFullHeight);
 							if (index == -1) {
 								theFile.selectedCommitHash = "";
 								theFile.set_texts();
@@ -692,9 +718,11 @@ class WhoDunnit{
 						} else if (movingRightDivider) {
 							rightDividerRect.setFillColor(dividerColorHighlight);
 						} else {
-							if (event.mouseMove.y > topbarHeight && within(event.mouseMove.x, leftDividerX-15, leftDividerX+15)) {
+							//if (event.mouseMove.y > topbarHeight && within(event.mouseMove.x, leftDividerX-15, leftDividerX+15)) {
+							if (event.mouseMove.y > topbarFullHeight && within(event.mouseMove.x, leftDividerX-15, leftDividerX+15)) {
 								leftDividerRect.setFillColor(dividerColorHighlight);
-							} else if (event.mouseMove.y > topbarHeight && within(event.mouseMove.x, rightDividerX-15, rightDividerX+15)) {
+							//} else if (event.mouseMove.y > topbarHeight && within(event.mouseMove.x, rightDividerX-15, rightDividerX+15)) {
+							} else if (event.mouseMove.y > topbarFullHeight && within(event.mouseMove.x, rightDividerX-15, rightDividerX+15)) {
 								rightDividerRect.setFillColor(dividerColorHighlight);
 							}
 						}
@@ -719,7 +747,8 @@ class WhoDunnit{
 			button2.set_size(topbarHeight, topbarHeight);
 
 			float step = (fontSizePixels + fontSizePixels/2);
-			float yOffset = theFile.scrollPositionPixels % int(step) - topbarHeight;
+			//float yOffset = theFile.scrollPositionPixels % int(step) - topbarHeight;
+			float yOffset = theFile.scrollPositionPixels % int(step) - topbarFullHeight;
 			int startIdx = std::max(0, int(std::floor(theFile.scrollPositionPixels / step)));
 
 			for (int i = startIdx; i < theFile.textLines.size(); i++) {
@@ -758,9 +787,9 @@ class WhoDunnit{
 			window.draw(gitLogBGRect);
 
 			float gitLogStep = (float)fontSizePixels * 1.3;
-			float gitLogYOffset = theFile.gitLogScrollPositionPixels % int(gitLogStep) - topbarHeight - gitLogTopBarHeight;
+			//float gitLogYOffset = theFile.gitLogScrollPositionPixels % int(gitLogStep) - topbarHeight - secondTopBarHeight;
+			float gitLogYOffset = theFile.gitLogScrollPositionPixels % int(gitLogStep) - topbarFullHeight;
 			int gitLogStartIdx = std::max(0, int(std::floor(theFile.gitLogScrollPositionPixels / gitLogStep)));
-			//for (int i = 0; i < theFile.commitTexts.size(); i++) {
 			for (int i = gitLogStartIdx; i < theFile.commitTexts.size(); i++) {
 				int iFromZero = i - gitLogStartIdx;
 				float x = rightDividerX+5;
@@ -795,17 +824,59 @@ class WhoDunnit{
 				}
 			}
 
-			sf::RectangleShape gitLogTopBarRect;
-			gitLogTopBarRect.setPosition(rightDividerX, topbarHeight);
-			gitLogTopBarRect.setSize(sf::Vector2f(window.getSize().x - rightDividerX, gitLogTopBarHeight));
-			gitLogTopBarRect.setFillColor(gitLogBackgroundColor);
-			window.draw(gitLogTopBarRect);
+			sf::RectangleShape topBarFullRect;
+			topBarFullRect.setPosition(0, topbarHeight);
+			topBarFullRect.setSize(sf::Vector2f(window.getSize().x, secondTopBarHeight));
+			topBarFullRect.setFillColor(gitLogBackgroundColor);
+			window.draw(topBarFullRect);
 
-			sf::RectangleShape gitLogTopBarDivider;
-			gitLogTopBarDivider.setPosition(rightDividerX,topbarHeight+gitLogTopBarHeight-1);
-			gitLogTopBarDivider.setSize(sf::Vector2f(window.getSize().x - rightDividerX, 1));
-			gitLogTopBarDivider.setFillColor(dividerColor);
-			window.draw(gitLogTopBarDivider);
+			sf::RectangleShape topBarFullDivider;
+			topBarFullDivider.setPosition(0,topbarFullHeight-1);
+			topBarFullDivider.setSize(sf::Vector2f(window.getSize().x, 1));
+			topBarFullDivider.setFillColor(dividerColor);
+			window.draw(topBarFullDivider);
+
+			sf::RectangleShape leftVertDividerRect;
+			leftVertDividerRect.setPosition(leftDividerX, topbarHeight);
+			leftVertDividerRect.setSize(sf::Vector2f(2, secondTopBarHeight));
+			leftVertDividerRect.setFillColor(dividerColor);
+			window.draw(leftVertDividerRect);
+
+			int currentTabXOffset = leftDividerX;
+			const int tabPaddingX = 10;
+			for (int i = 0; i < blameFiles.size(); i++) {
+				BlameFile &f = blameFiles[i];
+
+				sf::Text text;
+				text.setFont(theFont);
+				text.setString(basename(f.filename));
+				text.setPosition(currentTabXOffset + tabPaddingX, topbarHeight + 7);
+				text.setCharacterSize(13);
+
+				sf::RectangleShape backgroundRect;
+				backgroundRect.setFillColor(tabIndex == i ? sf::Color(30,30,40) : sf::Color(0,0,0));
+
+				int lastCurrentTabXOffset = currentTabXOffset;
+				currentTabXOffset += text.getGlobalBounds().width + 2*tabPaddingX;
+
+				backgroundRect.setPosition(currentTabXOffset, topbarHeight);
+				backgroundRect.setSize(sf::Vector2f(lastCurrentTabXOffset - currentTabXOffset + 2, secondTopBarHeight - 1));
+
+				window.draw(backgroundRect);
+				window.draw(text);
+
+				sf::RectangleShape vertDividerRect;
+				vertDividerRect.setPosition(currentTabXOffset, topbarHeight);
+				vertDividerRect.setSize(sf::Vector2f(2, secondTopBarHeight));
+				vertDividerRect.setFillColor(dividerColor); // TODO: Change to lower brightness?
+				window.draw(vertDividerRect);
+			}
+
+			sf::RectangleShape gitLogVertDividerRect;
+			gitLogVertDividerRect.setPosition(rightDividerX, topbarHeight);
+			gitLogVertDividerRect.setSize(sf::Vector2f(2, secondTopBarHeight));
+			gitLogVertDividerRect.setFillColor(dividerColor);
+			window.draw(gitLogVertDividerRect);
 
 			gitLogTopBarTitleText.setCharacterSize(15);
 			gitLogTopBarTitleText.setPosition(rightDividerX + 7, topbarHeight + 7);
@@ -832,10 +903,12 @@ class WhoDunnit{
 			window.draw(topbarDivider);
 
 			leftDividerRect.setSize(sf::Vector2f(2, window.getSize().y));
-			leftDividerRect.setPosition(leftDividerX, topbarHeight);
+			//leftDividerRect.setPosition(leftDividerX, topbarHeight);
+			leftDividerRect.setPosition(leftDividerX, topbarFullHeight);
 
 			rightDividerRect.setSize(sf::Vector2f(2, window.getSize().y));
-			rightDividerRect.setPosition(rightDividerX, topbarHeight);
+			//rightDividerRect.setPosition(rightDividerX, topbarHeight);
+			rightDividerRect.setPosition(rightDividerX, topbarFullHeight);
 
 			window.draw(leftDividerRect);
 			window.draw(rightDividerRect);

@@ -17,6 +17,11 @@ int main(int argc, char *argv[]) {
 		return 2;
 	}
 
+	vector<string> filenames;
+	for (int i = 1; i < argc; i++) {
+		filenames.push_back(argv[i]);
+	}
+
 	WhoDunnit whoDunnit;
-	return whoDunnit.run(argv[1]);
+	return whoDunnit.run(filenames);
 }
