@@ -469,12 +469,17 @@ class WhoDunnit{
 			}
 
 			if (! b.run_git_blame()) {
-				std::cerr << "Failed to run git blame\n";
-				return 1;
+				std::cerr << "Failed to run git blame for " << filename << std::endl;
+				continue;
 			}
 
 			b.set_texts();
 			blameFiles.push_back(b);
+		}
+
+		if (blameFiles.empty()) {
+			std::cerr << "Failed to open any files\n";
+			return 1;
 		}
 
 		tabIndex = 0;
