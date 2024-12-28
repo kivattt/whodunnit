@@ -37,10 +37,9 @@ int fontSizePixels = 15;
 struct BlameLine {
 	string commitHash;
 	string author;
+	string line;
 
 	unsigned long long committerTime = 0;
-
-	string line;
 };
 
 struct Commit {
@@ -58,17 +57,19 @@ struct CommitThing {
 };
 
 struct BlameFile {
-	string filename = "";
+	vector<sf::Text> textLines;
+	vector<sf::Text> authorLines;
+	vector<sf::RectangleShape> blameBgs;
+	vector<sf::RectangleShape> gitLogBgs;
 	vector<BlameLine> blameLines;
 	vector<Commit> commitLog;
 	vector<CommitThing> commitTexts;
-	unsigned long long oldestCommitterTime = ULLONG_MAX;
-	unsigned long long newestCommitterTime = 0;
+
+	string filename = "";
 	string oldestCommitHash = "";
 	string newestCommitHash = "";
-
 	string selectedCommitHash = "";
-	
+
 	void set_filename(string newFilename) {
 		filename = newFilename;
 	}
@@ -78,12 +79,11 @@ struct BlameFile {
 		return zeroToOne;
 	}
 
+	unsigned long long oldestCommitterTime = ULLONG_MAX;
+	unsigned long long newestCommitterTime = 0;
+	
 	int scrollPositionPixels = 0;
 	int gitLogScrollPositionPixels = 0;
-	vector<sf::Text> textLines;
-	vector<sf::Text> authorLines;
-	vector<sf::RectangleShape> blameBgs;
-	vector<sf::RectangleShape> gitLogBgs;
 
 	// Returns -1 on error
 	int mouse_y_to_blame_line_index(float mouseY, int topbarHeight) {
@@ -312,6 +312,7 @@ struct BlameFile {
 
 		//int exitCode = system(string("git blame --line-porcelain -t -S " + string(tempRevsFilename) + " " + sanitize_shell_argument(filename) + " > " + tempFilename).c_str());
 		int exitCode = system(string("git blame --line-porcelain -t " + sanitize_shell_argument(filename) + " > " + tempFilename).c_str());
+		//int exitCode = system(string("git blame " + oldestCommitHash + " --line-porcelain -t " + sanitize_shell_argument(filename) + " > " + tempFilename).c_str());
 		if (exitCode != 0) {
 			free(previousDirName);
 			return false;
@@ -408,9 +409,10 @@ struct BlameFile {
 class WhoDunnit{
 	public:
 
-	int tabIndex = 0;
 	vector <BlameFile> blameFiles;
 	BlameFile *theFile;
+
+	int tabIndex = 0;
 
 	int leftDividerX = 190;
 	int rightDividerX = START_WIDTH - 400;
@@ -631,7 +633,7 @@ class WhoDunnit{
 								} else {
 									tabIndex = (tabIndex + 1) % blameFiles.size();
 								}
-								theFile = &blameFiles[tabIndex];
+								switchToTab(window);
 								zoom(fontSizePixels); // To update the font sizes
 								break;
 						}
