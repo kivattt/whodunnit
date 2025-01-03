@@ -30,6 +30,8 @@
 using std::string;
 using std::vector;
 
+const int nBackgroundsPerGitLogEntry = 4; // 3 text field backgrounds, and a 1-pixel in height separator background
+
 sf::Font monospaceFont;
 sf::Font interFont;
 int fontSizePixels = 15;
@@ -59,8 +61,9 @@ struct CommitThing {
 struct BlameFile {
 	vector<sf::Text> textLines;
 	vector<sf::Text> authorLines;
-	vector<sf::RectangleShape> blameBgs;
-	vector<sf::RectangleShape> gitLogBgs;
+	sf::VertexArray blameBgsVertexArray;
+	sf::VertexArray sourceCodeBgsVertexArray;
+	sf::VertexArray gitLogBgsVertexArray;
 	vector<BlameLine> blameLines;
 	vector<Commit> commitLog;
 	vector<CommitThing> commitTexts;
@@ -125,12 +128,16 @@ struct BlameFile {
 	void set_texts() {
 		textLines.clear();
 		authorLines.clear();
-		blameBgs.clear();
+		blameBgsVertexArray.clear();
+		sourceCodeBgsVertexArray.clear();
 		commitTexts.clear();
-		gitLogBgs.clear();
+		gitLogBgsVertexArray.clear();
 
 		std::map<string, bool> commitsInBlame;
 
+		blameBgsVertexArray.resize(4 * blameLines.size());
+		sourceCodeBgsVertexArray.resize(4 * blameLines.size());
+		int i = 0;
 		for (BlameLine &e : blameLines) {
 			commitsInBlame[e.commitHash] = true;
 
@@ -161,22 +168,40 @@ struct BlameFile {
 			sf::RectangleShape rect;
 			//rect.setFillColor(sf::Color(color, color/1.5, color/1.5));
 			//int randomHue = rand() / double(RAND_MAX) * 360;
+			
+			sf::Color rectColor;
 
 			if (e.commitHash == selectedCommitHash) {
-				rect.setFillColor(hsv_to_rgb(200, 0.60, 0.65));
+				rectColor = hsv_to_rgb(200, 0.60, 0.65);
 			} else if (e.commitHash == newestCommitHash) {
 				//rect.setFillColor(hsv_to_rgb(130, 0.50, 1 - 0.3));
-				rect.setFillColor(latestCommitColor);
+				rectColor = latestCommitColor;
 			} else {
 				double zeroToOne = committer_time_0_to_1(e.committerTime);
-				rect.setFillColor(hsv_to_rgb(221, zeroToOne*0.65, 0.7d * (0.3 + zeroToOne * (1 - 0.3))));
+				rectColor = hsv_to_rgb(221, zeroToOne*0.65, 0.7d * (0.3 + zeroToOne * (1 - 0.3)));
 			}
-			blameBgs.push_back(rect);
+
+			blameBgsVertexArray[i+0].color = rectColor;
+			blameBgsVertexArray[i+1].color = rectColor;
+			blameBgsVertexArray[i+2].color = rectColor;
+			blameBgsVertexArray[i+3].color = rectColor;
+
+			sf::Color rectColorDim = rectColor;
+			rectColorDim.r /= 5;
+			rectColorDim.g /= 5;
+			rectColorDim.b /= 5;
+			sourceCodeBgsVertexArray[i+0].color = rectColorDim;
+			sourceCodeBgsVertexArray[i+1].color = rectColorDim;
+			sourceCodeBgsVertexArray[i+2].color = rectColorDim;
+			sourceCodeBgsVertexArray[i+3].color = rectColorDim;
+			i += 4;
 		}
 
-		int i = 0;
+		i = 0;
+		gitLogBgsVertexArray.resize(nBackgroundsPerGitLogEntry * 4 * commitLog.size());
+		bool alternatingColor = false;
 		for (Commit &c : commitLog) {
-			++i;
+			alternatingColor = !alternatingColor;
 			CommitThing thing;
 			thing.authorText.setFont(interFont);
 			thing.timeText.setFont(monospaceFont);
@@ -202,13 +227,18 @@ struct BlameFile {
 
 			commitTexts.push_back(thing);
 
-			sf::RectangleShape rect;
-			rect.setFillColor(gitLogBackgroundColor);
-			rect.setFillColor(i & 1 ? gitLogBackgroundColor : gitLogBackgroundColorAlternate);
+			sf::Color color = alternatingColor ? gitLogBackgroundColor : gitLogBackgroundColorAlternate;
 			if (c.commitHash == selectedCommitHash) {
-				rect.setFillColor(hsv_to_rgb(200, 0.60, 0.65));
+				color = hsv_to_rgb(200, 0.60, 0.65);
 			}
-			gitLogBgs.push_back(rect);
+			for (int j = 0; j < nBackgroundsPerGitLogEntry; j++) {
+				gitLogBgsVertexArray[i + 4*j + 0].color = color;
+				gitLogBgsVertexArray[i + 4*j + 1].color = color;
+				gitLogBgsVertexArray[i + 4*j + 2].color = color;
+				gitLogBgsVertexArray[i + 4*j + 3].color = color;
+			}
+
+			i += 4 * nBackgroundsPerGitLogEntry;
 		}
 	}
 
@@ -561,6 +591,7 @@ class WhoDunnit{
 			updateGitBlame();
 		});
 
+		sf::Clock clock;
 		while (window.isOpen()) {
 			sf::Event event;
 			while (window.pollEvent(event)) {
@@ -763,34 +794,38 @@ class WhoDunnit{
 			//float yOffset = theFile->scrollPositionPixels % int(step) - topbarHeight;
 			float yOffset = theFile->scrollPositionPixels % int(step) - topbarFullHeight;
 			int startIdx = std::max(0, int(std::floor(theFile->scrollPositionPixels / step)));
+			int numElements = std::min(int(theFile->textLines.size()-startIdx), std::max(0, int(std::ceil((window.getSize().y + yOffset) / step))));
 
-			for (int i = startIdx; i < theFile->textLines.size(); i++) {
+			for (int i = startIdx; i < startIdx+numElements && i < theFile->textLines.size(); i++) {
 				int iFromZero = i - startIdx;
 				float y = iFromZero * step - yOffset;
 
-				theFile->blameBgs[i].setSize(sf::Vector2f(leftDividerX, step));
-				theFile->blameBgs[i].setPosition(0, y);
-				window.draw(theFile->blameBgs[i]);
+				theFile->blameBgsVertexArray[i*4+0].position = sf::Vector2f(0, y+step);
+				theFile->blameBgsVertexArray[i*4+1].position = sf::Vector2f(0, y);
+				theFile->blameBgsVertexArray[i*4+2].position = sf::Vector2f(leftDividerX, y);
+				theFile->blameBgsVertexArray[i*4+3].position = sf::Vector2f(leftDividerX, y+step);
+
+				theFile->sourceCodeBgsVertexArray[i*4+0].position = sf::Vector2f(leftDividerX+2, y+step);
+				theFile->sourceCodeBgsVertexArray[i*4+1].position = sf::Vector2f(leftDividerX+2, y);
+				theFile->sourceCodeBgsVertexArray[i*4+2].position = sf::Vector2f(leftDividerX+2 + window.getSize().x, y);
+				theFile->sourceCodeBgsVertexArray[i*4+3].position = sf::Vector2f(leftDividerX+2 + window.getSize().x, y+step);
+			}
+
+			// Just to make OpenGL shut up
+			if (numElements > 0) {
+				window.draw(&theFile->blameBgsVertexArray[4*startIdx], 4*numElements, sf::Quads);
+				window.draw(&theFile->sourceCodeBgsVertexArray[4*startIdx], 4*numElements, sf::Quads);
+			}
+
+			for (int i = startIdx; i < startIdx+numElements && i < theFile->textLines.size(); i++) {
+				int iFromZero = i - startIdx;
+				float y = iFromZero * step - yOffset;
 
 				theFile->authorLines[i].setPosition(2, y);
 				window.draw(theFile->authorLines[i]);
 
-				sf::RectangleShape rect;
-				rect.setSize(sf::Vector2f(window.getSize().x, step));
-				rect.setPosition(leftDividerX+2, y);
-				sf::Color c = theFile->blameBgs[i].getFillColor();
-				c.r /= 5;
-				c.g /= 5;
-				c.b /= 5;
-				rect.setFillColor(c);
-				window.draw(rect);
-
 				theFile->textLines[i].setPosition(leftDividerX+10, y);
 				window.draw(theFile->textLines[i]);
-
-				if (y + step > window.getSize().y) {
-					break;
-				}
 			}
 
 			sf::RectangleShape topBarTabsRect;
@@ -844,7 +879,60 @@ class WhoDunnit{
 			float gitLogStep = (float)fontSizePixels * 1.3;
 			float gitLogYOffset = theFile->gitLogScrollPositionPixels % int(gitLogStep) - topbarFullHeight;
 			int gitLogStartIdx = std::max(0, int(std::floor(theFile->gitLogScrollPositionPixels / gitLogStep)));
-			for (int i = gitLogStartIdx; i < theFile->commitTexts.size(); i++) {
+			int numGitLogElements = std::min(int(theFile->commitTexts.size()-gitLogStartIdx), std::max(0, int(std::ceil((window.getSize().y + gitLogYOffset) / gitLogStep))));
+
+			for (int i = gitLogStartIdx; i < gitLogStartIdx+numGitLogElements && i < theFile->commitTexts.size(); i++) {
+				int iFromZero = i - gitLogStartIdx;
+				float x = rightDividerX+5;
+				int y = iFromZero * gitLogStep - gitLogYOffset;
+
+				float timeTextBgX = rightDividerX;
+				float timeTextBgY = y;
+				float timeTextBgWidth = window.getSize().x - rightDividerX;
+				float timeTextBgHeight = std::ceil(gitLogStep);
+				theFile->gitLogBgsVertexArray[nBackgroundsPerGitLogEntry*4*i + 0].position = sf::Vector2f(timeTextBgX, timeTextBgY+timeTextBgHeight);
+				theFile->gitLogBgsVertexArray[nBackgroundsPerGitLogEntry*4*i + 1].position = sf::Vector2f(timeTextBgX, timeTextBgY);
+				theFile->gitLogBgsVertexArray[nBackgroundsPerGitLogEntry*4*i + 2].position = sf::Vector2f(timeTextBgX+timeTextBgWidth, timeTextBgY);
+				theFile->gitLogBgsVertexArray[nBackgroundsPerGitLogEntry*4*i + 3].position = sf::Vector2f(timeTextBgX+timeTextBgWidth, timeTextBgY+timeTextBgHeight);
+
+				float authorTextBgX = rightDividerX+100;
+				float authorTextBgY = y;
+				float authorTextBgWidth = timeTextBgWidth;
+				float authorTextBgHeight = timeTextBgHeight;
+				theFile->gitLogBgsVertexArray[nBackgroundsPerGitLogEntry*4*i + 4].position = sf::Vector2f(authorTextBgX, authorTextBgY+authorTextBgHeight);
+				theFile->gitLogBgsVertexArray[nBackgroundsPerGitLogEntry*4*i + 5].position = sf::Vector2f(authorTextBgX, authorTextBgY);
+				theFile->gitLogBgsVertexArray[nBackgroundsPerGitLogEntry*4*i + 6].position = sf::Vector2f(authorTextBgX+authorTextBgWidth, authorTextBgY);
+				theFile->gitLogBgsVertexArray[nBackgroundsPerGitLogEntry*4*i + 7].position = sf::Vector2f(authorTextBgX+authorTextBgWidth, authorTextBgY+authorTextBgHeight);
+
+				float titleTextBgX = rightDividerX+220;
+				float titleTextBgY = y;
+				float titleTextBgWidth = timeTextBgWidth;
+				float titleTextBgHeight = timeTextBgHeight;
+				theFile->gitLogBgsVertexArray[nBackgroundsPerGitLogEntry*4*i +  8].position = sf::Vector2f(titleTextBgX, titleTextBgY+titleTextBgHeight);
+				theFile->gitLogBgsVertexArray[nBackgroundsPerGitLogEntry*4*i +  9].position = sf::Vector2f(titleTextBgX, titleTextBgY);
+				theFile->gitLogBgsVertexArray[nBackgroundsPerGitLogEntry*4*i + 10].position = sf::Vector2f(titleTextBgX+titleTextBgWidth, titleTextBgY);
+				theFile->gitLogBgsVertexArray[nBackgroundsPerGitLogEntry*4*i + 11].position = sf::Vector2f(titleTextBgX+titleTextBgWidth, titleTextBgY+titleTextBgHeight);
+
+				float bgLineX = rightDividerX;
+				float bgLineY = y;
+				float bgLineWidth = window.getSize().x - rightDividerX;
+				float bgLineHeight = 1;
+				theFile->gitLogBgsVertexArray[nBackgroundsPerGitLogEntry*4*i + 12].position = sf::Vector2f(bgLineX, bgLineY+bgLineHeight);
+				theFile->gitLogBgsVertexArray[nBackgroundsPerGitLogEntry*4*i + 13].position = sf::Vector2f(bgLineX, bgLineY);
+				theFile->gitLogBgsVertexArray[nBackgroundsPerGitLogEntry*4*i + 14].position = sf::Vector2f(bgLineX+bgLineWidth, bgLineY);
+				theFile->gitLogBgsVertexArray[nBackgroundsPerGitLogEntry*4*i + 15].position = sf::Vector2f(bgLineX+bgLineWidth, bgLineY+bgLineHeight);
+				theFile->gitLogBgsVertexArray[nBackgroundsPerGitLogEntry*4*i + 12].color = backgroundColor;
+				theFile->gitLogBgsVertexArray[nBackgroundsPerGitLogEntry*4*i + 13].color = backgroundColor;
+				theFile->gitLogBgsVertexArray[nBackgroundsPerGitLogEntry*4*i + 14].color = backgroundColor;
+				theFile->gitLogBgsVertexArray[nBackgroundsPerGitLogEntry*4*i + 15].color = backgroundColor;
+			}
+
+			// Just to make OpenGL shut up
+			if (numGitLogElements > 0) {
+				window.draw(&theFile->gitLogBgsVertexArray[nBackgroundsPerGitLogEntry*4*gitLogStartIdx], nBackgroundsPerGitLogEntry*4*numGitLogElements, sf::Quads);
+			}
+
+			for (int i = gitLogStartIdx; i < gitLogStartIdx+numGitLogElements && i < theFile->commitTexts.size(); i++) {
 				int iFromZero = i - gitLogStartIdx;
 				float x = rightDividerX+5;
 				int y = iFromZero * gitLogStep - gitLogYOffset;
@@ -853,39 +941,19 @@ class WhoDunnit{
 					textY = y;
 				}
 
-				theFile->gitLogBgs[i].setSize(sf::Vector2f(window.getSize().x - rightDividerX, std::ceil(gitLogStep)));
-
 				auto &e = theFile->commitTexts[i];
 
-				theFile->gitLogBgs[i].setPosition(rightDividerX, y);
-				window.draw(theFile->gitLogBgs[i]);
 				e.timeText.setPosition(x,textY);
 				window.draw(e.timeText);
 
-				theFile->gitLogBgs[i].setPosition(rightDividerX+100, y);
-				window.draw(theFile->gitLogBgs[i]);
 				e.authorText.setPosition(x+100,textY);
 				window.draw(e.authorText);
 
-				//theFile->gitLogBgs[i].setPosition(rightDividerX, y);
-				//window.draw(theFile->gitLogBgs[i]);
+				// XXX: Missing a gitLogBgsVertexArray thing, will need to increase nBackgroundsPerGitLogEntry by 1 to add it.
 				//e.commitHashText.setPosition(x,textY);
-				//window.draw(e.commitHashText);
 
-				theFile->gitLogBgs[i].setPosition(rightDividerX+220, y);
-				window.draw(theFile->gitLogBgs[i]);
 				e.titleText.setPosition(x+220,textY);
 				window.draw(e.titleText);
-
-				sf::RectangleShape bgLineRect;
-				bgLineRect.setPosition(rightDividerX, y);
-				bgLineRect.setSize(sf::Vector2f(window.getSize().x - rightDividerX, 1));
-				bgLineRect.setFillColor(backgroundColor);
-				window.draw(bgLineRect);
-
-				if (y + gitLogStep > window.getSize().y) {
-					break;
-				}
 			}
 
 			sf::RectangleShape topBarGitLogRect;
@@ -950,6 +1018,8 @@ class WhoDunnit{
 			rightClickMenu.draw(window);
 
 			window.display();
+			//std::cout << 1000000.0f / clock.getElapsedTime().asMicroseconds() << '\n';
+			clock.restart();
 		}
 
 		return 0;
