@@ -517,7 +517,7 @@ class WhoDunnit{
 		tabIndex = 0;
 		theFile = &blameFiles[tabIndex];
 
-		sf::RenderWindow window(sf::VideoMode(START_WIDTH, START_HEIGHT), "whodunnit - " + basename(theFile->filename));
+		sf::RenderWindow window(sf::VideoMode({START_WIDTH, START_HEIGHT}), "whodunnit - " + basename(theFile->filename));
 		window.setVerticalSyncEnabled(true);
 
 		sf::RectangleShape leftDividerRect;
