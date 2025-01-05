@@ -1,6 +1,8 @@
 #ifndef COLORS_HPP
 #define COLORS_HPP
 
+#include <SFML/Graphics.hpp>
+
 const sf::Color backgroundColor = sf::Color(10,10,10);
 
 //const sf::Color latestCommitColor = hsv_to_rgb(130, 0.50, 0.4);

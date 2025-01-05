@@ -51,7 +51,7 @@ class RightClickMenu {
 		x = newX;
 		y = newY - buttonHeight/2;
 
-		backgroundRect.setPosition(x, y);
+		backgroundRect.setPosition({x, y});
 
 		for (int i = 0; i < buttons.size(); i++) {
 			buttons[i].set_position(x, y + i * buttonHeight);
@@ -62,7 +62,7 @@ class RightClickMenu {
 			if (spr == nullptr) {
 				continue;
 			}
-			spr->setPosition(sf::Vector2f(x + 8, y + 3 + i * buttonHeight));
+			spr->setPosition({sf::Vector2f(x + 8, y + 3 + i * buttonHeight)});
 			++i;
 		}
 	}
@@ -90,7 +90,7 @@ class RightClickMenu {
 		visible = false;
 	}
 
-	void update(sf::Event event) {
+	void update(std::optional<sf::Event> event) {
 		if (!visible) {
 			return;
 		}
@@ -112,7 +112,7 @@ class RightClickMenu {
 		float yy = y + 5 + buttonHeight/2;
 		float theWidth = width - 5;
 		float height = (float)std::max(buttonHeight, (int)buttons.size() * buttonHeight);
-		sf::VertexArray gradient(sf::TriangleStrip, 4);
+		sf::VertexArray gradient(sf::PrimitiveType::TriangleStrip, 4);
 		gradient[0].position = sf::Vector2f(xx, yy+height);
 		gradient[1].position = sf::Vector2f(xx+theWidth, yy+height);
 		gradient[2].position = sf::Vector2f(xx,yy);

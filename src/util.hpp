@@ -2,7 +2,9 @@
 #define UTIL_HPP
 
 #include <cstdlib>
+#include <cstdint>
 #include <fstream>
+#include <algorithm>
 #include <sstream>
 #include <cstdio>
 #include <unistd.h>
@@ -76,6 +78,7 @@ sf::Color hsv_to_rgb(double h, double s, double v) {
 		r = v;
 		g = v;
 		b = v;
+		//return sf::Color((std::uint8_t)r*255, (std::uint8_t)g*255, (std::uint8_t)b*255);
 		return sf::Color(r*255, g*255, b*255);
 	}
 	hh = h;
@@ -122,6 +125,7 @@ sf::Color hsv_to_rgb(double h, double s, double v) {
 		break;
 	}
 
+	//return sf::Color((std::uint8_t)r*255, (std::uint8_t)g*255, (std::uint8_t)b*255);
 	return sf::Color(r*255, g*255, b*255);
 }
 
