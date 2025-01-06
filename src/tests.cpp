@@ -7,15 +7,16 @@
 using std::string;
 
 int main() {
-	std::cout << "Testing parent_dir()" << std::endl;
+	std::cout << "Testing parent_path()" << std::endl;
 	std::map<string, string> expected = {
 		{"/home/user", "/home"},
 		{"something.txt", "."},
 		{"/home/user/file.txt", "/home/user"},
-		{"/home/kivah/main/projects/fen/lua-file-preview-examples/markdown.lua", "/home/kivah/main/projects/fen/lua-file-preview-examples"}
+		{"/home/kivah/main/projects/fen/lua-file-preview-examples/markdown.lua", "/home/kivah/main/projects/fen/lua-file-preview-examples"},
+		{"src/main.cpp", "src"}
 	};
 	for (auto &[input, expected] : expected) {
-		const string got = parent_dir(input);
+		const string got = parent_path(input);
 		if (got != expected) {
 			std::cerr << "Expected \"" << expected << "\", but got: \"" << got << "\"" << std::endl;
 			return 1;

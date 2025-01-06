@@ -256,13 +256,13 @@ struct BlameFile {
 		close(fd);
 
 		char *previousDirName = get_current_dir_name();
-		if (chdir(parent_dir(filename).c_str()) == -1) {
+		if (chdir(absolute_path(parent_path(filename)).c_str()) == -1) {
 			free(previousDirName);
 			return false;
 		}
 
 		//int exitCode = system(string("git log --pretty=format:\"%an%n%at %H %s\" " + sanitize_shell_argument(filename) + " > " + tempFilename).c_str());
-		int exitCode = system(string("git log --pretty=format:\"%an%n%as %H %s\" " + sanitize_shell_argument(filename) + " > " + tempFilename).c_str());
+		int exitCode = system(string("git log --pretty=format:\"%an%n%as %H %s\" " + sanitize_shell_argument(basename(filename)) + " > " + tempFilename).c_str());
 		if (exitCode != 0) {
 			free(previousDirName);
 			return false;
@@ -339,13 +339,13 @@ struct BlameFile {
 		revsFile.close();
 
 		char *previousDirName = get_current_dir_name();
-		if (chdir(parent_dir(filename).c_str()) == -1) {
+		if (chdir(absolute_path(parent_path(filename)).c_str()) == -1) {
 			free(previousDirName);
 			return false;
 		}
 
 		//int exitCode = system(string("git blame --line-porcelain -t -S " + string(tempRevsFilename) + " " + sanitize_shell_argument(filename) + " > " + tempFilename).c_str());
-		int exitCode = system(string("git blame --line-porcelain -t " + sanitize_shell_argument(filename) + " > " + tempFilename).c_str());
+		int exitCode = system(string("git blame --line-porcelain -t " + sanitize_shell_argument(basename(filename)) + " > " + tempFilename).c_str());
 		//int exitCode = system(string("git blame " + oldestCommitHash + " --line-porcelain -t " + sanitize_shell_argument(filename) + " > " + tempFilename).c_str());
 		if (exitCode != 0) {
 			free(previousDirName);

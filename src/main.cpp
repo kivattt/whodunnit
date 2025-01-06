@@ -19,7 +19,11 @@ int main(int argc, char *argv[]) {
 
 	vector<string> filenames;
 	for (int i = 1; i < argc; i++) {
-		filenames.push_back(argv[i]);
+		string filename = argv[i];
+		if (filename.empty()) {
+			continue;
+		}
+		filenames.push_back(filename);
 	}
 
 	WhoDunnit whoDunnit;

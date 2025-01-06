@@ -47,7 +47,28 @@ string without_ending_slash(string path) {
 	return path.substr(0, path.size() - 1);
 }
 
-string parent_dir(string path) {
+string with_ending_slash(string path) {
+	if (path.empty() || path.back() == '/') {
+		return path;
+	}
+
+	return path + "/";
+}
+
+string absolute_path(string path) {
+	if (path.empty()) {
+		return path;
+	}
+
+	if (path[0] == '/') {
+		return path;
+	}
+
+	char *cwd = get_current_dir_name();
+	return with_ending_slash(cwd) + path;
+}
+
+string parent_path(string path) {
 	size_t lastSlash = path.find_last_of('/');
 	if (lastSlash == string::npos) {
 		return ".";
@@ -139,7 +160,7 @@ string get_remote_url(string filename) {
 	close(fd);
 
 	char *previousDirName = get_current_dir_name();
-	if (chdir(parent_dir(filename).c_str()) == -1) {
+	if (chdir(absolute_path(parent_path(filename)).c_str()) == -1) {
 		free(previousDirName);
 		return "";
 	}
