@@ -477,7 +477,7 @@ class WhoDunnit{
 
 	void switchToTab(sf::RenderWindow &window) {
 		theFile = &blameFiles[tabIndex];
-		window.setTitle("whodunnit - " + theFile->filename);
+		window.setTitle("whodunnit - " + basename(theFile->filename));
 	}
 
 	int run(vector<string> filenames) {
