@@ -1,3 +1,5 @@
+## This is a work-in-progress program!
+
 Git blame viewer for Linux
 
 <img src="screenshot.png" alt="whodunnit showing a git blame on its own source code">
