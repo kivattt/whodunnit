@@ -75,6 +75,8 @@ struct BlameFile {
 	string oldestCommitHash = "";
 	string newestCommitHash = "";
 	string selectedCommitHash = "";
+	int selectedCommitIndex = -1;
+	int selectedBlameLineIndex = -1;
 
 	void set_filename(string newFilename) {
 		filename = newFilename;
@@ -141,6 +143,7 @@ struct BlameFile {
 		blameBgsVertexArray.resize(6 * blameLines.size());
 		sourceCodeBgsVertexArray.resize(6 * blameLines.size());
 		int i = 0;
+		int index = 0;
 		for (BlameLine &e : blameLines) {
 			commitsInBlame[e.commitHash] = true;
 
@@ -174,7 +177,7 @@ struct BlameFile {
 			sf::Color rectColor;
 
 			if (e.commitHash == selectedCommitHash) {
-				rectColor = hsv_to_rgb(200, 0.60, 0.65);
+				rectColor = selectedBlameColor;
 			} else if (e.commitHash == newestCommitHash) {
 				//rect.setFillColor(hsv_to_rgb(130, 0.50, 1 - 0.3));
 				rectColor = latestCommitColor;
@@ -201,6 +204,7 @@ struct BlameFile {
 			sourceCodeBgsVertexArray[i+4].color = rectColorDim;
 			sourceCodeBgsVertexArray[i+5].color = rectColorDim;
 			i += 6;
+			++index;
 		}
 
 		i = 0;
@@ -231,7 +235,7 @@ struct BlameFile {
 
 			sf::Color color = alternatingColor ? gitLogBackgroundColor : gitLogBackgroundColorAlternate;
 			if (c.commitHash == selectedCommitHash) {
-				color = hsv_to_rgb(200, 0.60, 0.65);
+				color = selectedBlameColor;
 			}
 			for (int j = 0; j < nBackgroundsPerGitLogEntry; j++) {
 				gitLogBgsVertexArray[i + 6*j + 0].color = color;
@@ -437,7 +441,12 @@ struct BlameFile {
 		set_texts();
 		return true;
 	}
+};
 
+enum class SelectedPane {
+	BlameLines,
+	SourceCode,
+	CommitLog,
 };
 
 class WhoDunnit{
@@ -445,6 +454,7 @@ class WhoDunnit{
 
 	vector <BlameFile> blameFiles;
 	BlameFile *theFile;
+	SelectedPane lastSelectedPane = SelectedPane::SourceCode;
 
 	int tabIndex = 0;
 
@@ -530,6 +540,11 @@ class WhoDunnit{
 
 		sf::RectangleShape rightDividerRect;
 		rightDividerRect.setFillColor(dividerColor);
+
+		sf::RectangleShape selectedBlameLineRect;
+		selectedBlameLineRect.setFillColor(sf::Color::Transparent); // Invisible
+		selectedBlameLineRect.setOutlineColor(sf::Color(255,255,255));
+		selectedBlameLineRect.setOutlineThickness(-1.0f);
 
 		sf::Texture clipboardTxt;
 		if (! clipboardTxt.loadFromFile("icons/clipboard.png")) {
@@ -638,21 +653,38 @@ class WhoDunnit{
 							break;
 						case sf::Keyboard::Key::Escape:
 							theFile->selectedCommitHash = "";
+							theFile->selectedCommitIndex = -1;
+							theFile->selectedBlameLineIndex = -1;
 							theFile->set_texts();
 							break;
 						case sf::Keyboard::Key::Home:
 							if (ctrlDown) {
 								theFile->scrollPositionPixels = 0;
+							} else if (lastSelectedPane == SelectedPane::BlameLines) {
+								theFile->selectedBlameLineIndex = 0;
+								theFile->selectedCommitHash = theFile->blameLines[theFile->selectedBlameLineIndex].commitHash;
+								theFile->set_texts();
+							} else if (lastSelectedPane == SelectedPane::CommitLog) {
+								theFile->selectedCommitIndex = 0;
+								theFile->selectedCommitHash = theFile->commitLog[theFile->selectedCommitIndex].commitHash;
+								theFile->set_texts();
 							}
 							break;
 						case sf::Keyboard::Key::End:
 							if (ctrlDown) {
 								float step = (fontSizePixels + fontSizePixels/2);
 								theFile->scrollPositionPixels = std::max(0, int(theFile->textLines.size() * step - window.getSize().y));
+							} else if (lastSelectedPane == SelectedPane::BlameLines) {
+								theFile->selectedBlameLineIndex = theFile->blameLines.size()-1;
+								theFile->selectedCommitHash = theFile->blameLines[theFile->selectedBlameLineIndex].commitHash;
+								theFile->set_texts();
+							} else if (lastSelectedPane == SelectedPane::CommitLog) {
+								theFile->selectedCommitIndex = theFile->commitLog.size()-1;
+								theFile->selectedCommitHash = theFile->commitLog[theFile->selectedCommitIndex].commitHash;
+								theFile->set_texts();
 							}
 							break;
 						case sf::Keyboard::Key::Add: // The '+' key
-						case sf::Keyboard::Key::Unknown: // FIXME: (we now have SFML 3.0.0) My '+' key isn't recognized, and we don't have event.key.scancode in SFML 2.5.1
 							if (ctrlDown) {
 								zoom(fontSizePixels + 1);
 							}
@@ -677,6 +709,65 @@ class WhoDunnit{
 							}
 							switchToTab(window);
 							zoom(fontSizePixels); // To update the font sizes
+							break;
+
+						// FIXME: On up/down arrow keys, store the last pane interacted with so we can either
+						// Move up/down in the blames
+						// Move up/down in the source code
+						// Move up/down in the commit log
+
+						case sf::Keyboard::Key::Up:
+						case sf::Keyboard::Key::K:
+							if (lastSelectedPane == SelectedPane::SourceCode || (theFile->selectedBlameLineIndex == -1 && theFile->selectedCommitIndex == -1)) {
+								// Scrolling
+								theFile->scrollPositionPixels -= 60;
+								if (theFile->scrollPositionPixels < 0) {
+									theFile->scrollPositionPixels = 0;
+								}
+							} else if (lastSelectedPane == SelectedPane::BlameLines) {
+								if (theFile->selectedBlameLineIndex == -1) {
+									break;
+								}
+
+								theFile->selectedBlameLineIndex = std::max(0, theFile->selectedBlameLineIndex - 1);
+								theFile->selectedCommitHash = theFile->blameLines[theFile->selectedBlameLineIndex].commitHash;
+								theFile->set_texts();
+							} else if (lastSelectedPane == SelectedPane::CommitLog) {
+								if (theFile->selectedCommitIndex == -1) {
+									break;
+								}
+
+								theFile->selectedCommitIndex = std::max(0, theFile->selectedCommitIndex - 1);
+								theFile->selectedCommitHash = theFile->commitLog[theFile->selectedCommitIndex].commitHash;
+								theFile->set_texts();
+							} else {
+								std::cout << "FIXME: Unhandled\n";
+							}
+							break;
+						case sf::Keyboard::Key::Down:
+						case sf::Keyboard::Key::J:
+							if (lastSelectedPane == SelectedPane::SourceCode || (theFile->selectedBlameLineIndex == -1 && theFile->selectedCommitIndex == -1)) {
+								// Scrolling
+								theFile->scrollPositionPixels += 60;
+							} else if (lastSelectedPane == SelectedPane::BlameLines) {
+								if (theFile->selectedBlameLineIndex == -1) {
+									break;
+								}
+
+								theFile->selectedBlameLineIndex = std::min((int)theFile->blameLines.size() - 1, theFile->selectedBlameLineIndex + 1);
+								theFile->selectedCommitHash = theFile->blameLines[theFile->selectedBlameLineIndex].commitHash;
+								theFile->set_texts();
+							} else if (lastSelectedPane == SelectedPane::CommitLog) {
+								if (theFile->selectedCommitIndex == -1) {
+									break;
+								}
+
+								theFile->selectedCommitIndex = std::min((int)theFile->commitLog.size() - 1, theFile->selectedCommitIndex + 1);
+								theFile->selectedCommitHash = theFile->commitLog[theFile->selectedCommitIndex].commitHash;
+								theFile->set_texts();
+							} else {
+								std::cout << "FIXME: Unhandled\n";
+							}
 							break;
 					}
 				} else if (const auto e = event->getIf<sf::Event::MouseWheelScrolled>()) {
@@ -724,34 +815,45 @@ class WhoDunnit{
 					} else if (isLeftClick && within(position.x, rightDividerX-15, rightDividerX+15)) {
 						movingRightDivider = true;
 					} else if (position.x < leftDividerX) { // Clicking a blame on the left
+						lastSelectedPane = SelectedPane::BlameLines;
+
 						//int index = theFile->mouse_y_to_blame_line_index(position.y, topbarHeight);
 						int index = theFile->mouse_y_to_blame_line_index(position.y, topbarFullHeight);
 						if (index == -1) {
 							theFile->selectedCommitHash = "";
+							theFile->selectedCommitIndex = -1;
+							theFile->selectedBlameLineIndex = -1;
 							theFile->set_texts();
 							break;
 						}
 
 						theFile->selectedCommitHash = theFile->blameLines[index].commitHash;
+						theFile->selectedBlameLineIndex = index;
 						theFile->set_texts();
 						if (isRightClick) {
 							rightClickMenu.set_position(position.x, position.y);
 							rightClickMenu.show();
 						}
 					} else if (position.y > (topbarFullHeight) && position.x > rightDividerX) { // Clicking a commit (Git Log) on the right
+						lastSelectedPane = SelectedPane::CommitLog;
+
 						int index = theFile->mouse_y_to_git_log_index(position.y, topbarFullHeight);
 						if (index == -1) {
 							theFile->selectedCommitHash = "";
+							theFile->selectedCommitIndex = -1;
 							theFile->set_texts();
 							break;
 						}
 
 						theFile->selectedCommitHash = theFile->commitLog[index].commitHash;
+						theFile->selectedCommitIndex = index;
 						theFile->set_texts();
 						if (isRightClick) {
 							rightClickMenu.set_position(position.x, position.y);
 							rightClickMenu.show();
 						}
+					} else {
+						lastSelectedPane = SelectedPane::SourceCode;
 					}
 				} else if (const auto e = event->getIf<sf::Event::MouseButtonReleased>()) {
 					sf::Mouse::Button button = e->button;
@@ -804,6 +906,7 @@ class WhoDunnit{
 			int startIdx = std::max(0, int(std::floor(theFile->scrollPositionPixels / step)));
 			int numElements = std::min(int(theFile->textLines.size()-startIdx), std::max(0, int(std::ceil((window.getSize().y + yOffset) / step))));
 
+			bool selectedBlameLineRectVisible = false;
 			for (int i = startIdx; i < startIdx+numElements && i < theFile->textLines.size(); i++) {
 				int iFromZero = i - startIdx;
 				float y = iFromZero * step - yOffset;
@@ -821,6 +924,13 @@ class WhoDunnit{
 				theFile->sourceCodeBgsVertexArray[i*6+3].position = sf::Vector2f(leftDividerX+2, y+step);
 				theFile->sourceCodeBgsVertexArray[i*6+4].position = sf::Vector2f(leftDividerX+2 + window.getSize().x, y);
 				theFile->sourceCodeBgsVertexArray[i*6+5].position = sf::Vector2f(leftDividerX+2 + window.getSize().x, y+step);
+
+				if (theFile->selectedBlameLineIndex != -1 && i == theFile->selectedBlameLineIndex) {
+					// TODO: Make this a transparent gradient rectangle instead, so it looks cooler
+					selectedBlameLineRect.setPosition({-1, y});
+					selectedBlameLineRect.setSize({window.getSize().x, step});
+					selectedBlameLineRectVisible = true;
+				}
 			}
 
 			// Just to make OpenGL shut up
@@ -847,6 +957,9 @@ class WhoDunnit{
 
 				theFile->textLines[i].setPosition({leftDividerX+10, y});
 				window.draw(theFile->textLines[i]);
+			}
+			if (selectedBlameLineRectVisible) {
+				window.draw(selectedBlameLineRect);
 			}
 
 			sf::RectangleShape topBarTabsRect;
