@@ -522,7 +522,8 @@ class WhoDunnit{
 		theFile = &blameFiles[tabIndex];
 
 		sf::RenderWindow window(sf::VideoMode({START_WIDTH, START_HEIGHT}), "whodunnit - " + basename(theFile->filename));
-		//window.setVerticalSyncEnabled(true);
+		window.setVerticalSyncEnabled(true);
+		sf::Vector2u oldWindowSize = {START_WIDTH, START_HEIGHT};
 
 		sf::RectangleShape leftDividerRect;
 		leftDividerRect.setFillColor(dividerColor);
@@ -618,9 +619,14 @@ class WhoDunnit{
 					leftDividerX = std::min(leftDividerX, std::max(0, int(window.getSize().x) - LEFT_DIVIDER_FROM_RIGHT));
 					//leftDividerX = std::max(LEFT_DIVIDER_FROM_LEFT, leftDividerX - LEFT_DIVIDER_FROM_RIGHT);
 					leftDividerX = std::max(leftDividerX, LEFT_DIVIDER_FROM_LEFT);
-					
+
+					rightDividerX += e->size.x - oldWindowSize.x;
+
+					// Keep rightDividerX in bounds
 					rightDividerX = std::min(rightDividerX, std::max(0, int(window.getSize().x) - LEFT_DIVIDER_FROM_RIGHT));
 					rightDividerX = std::max(leftDividerX + LEFT_DIVIDER_FROM_LEFT, rightDividerX);
+
+					oldWindowSize = e->size;
 				} else if (const auto e = event->getIf<sf::Event::KeyPressed>()) {
 					sf::Keyboard::Key keyCode = e->code;
 
