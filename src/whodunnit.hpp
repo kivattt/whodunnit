@@ -543,8 +543,8 @@ class WhoDunnit{
 
 		sf::RectangleShape selectedBlameLineRect;
 		selectedBlameLineRect.setFillColor(sf::Color::Transparent); // Invisible
-		selectedBlameLineRect.setOutlineColor(sf::Color(255,255,255));
-		selectedBlameLineRect.setOutlineThickness(-1.0f);
+		selectedBlameLineRect.setOutlineColor(selectedBlameLineRectColor);
+		selectedBlameLineRect.setOutlineThickness(1.0f);
 
 		sf::Texture clipboardTxt;
 		if (! clipboardTxt.loadFromFile("icons/clipboard.png")) {
@@ -621,7 +621,7 @@ class WhoDunnit{
 				button2.update(event);
 				rightClickMenu.update(event);
 
-				bool ctrlDown = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RControl);
+				bool isCtrlDown = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RControl);
 
 				if (event->is<sf::Event::Closed>()) {
 					window.close();
@@ -658,7 +658,7 @@ class WhoDunnit{
 							theFile->set_texts();
 							break;
 						case sf::Keyboard::Key::Home:
-							if (ctrlDown) {
+							if (isCtrlDown) {
 								theFile->scrollPositionPixels = 0;
 							} else if (lastSelectedPane == SelectedPane::BlameLines) {
 								theFile->selectedBlameLineIndex = 0;
@@ -671,7 +671,7 @@ class WhoDunnit{
 							}
 							break;
 						case sf::Keyboard::Key::End:
-							if (ctrlDown) {
+							if (isCtrlDown) {
 								float step = (fontSizePixels + fontSizePixels/2);
 								theFile->scrollPositionPixels = std::max(0, int(theFile->textLines.size() * step - window.getSize().y));
 							} else if (lastSelectedPane == SelectedPane::BlameLines) {
@@ -685,12 +685,12 @@ class WhoDunnit{
 							}
 							break;
 						case sf::Keyboard::Key::Add: // The '+' key
-							if (ctrlDown) {
+							if (isCtrlDown) {
 								zoom(fontSizePixels + 1);
 							}
 							break;
 						case sf::Keyboard::Key::Hyphen: // The '-' key
-							if (ctrlDown) {
+							if (isCtrlDown) {
 								zoom(fontSizePixels - 1);
 							}
 							break;
@@ -729,7 +729,17 @@ class WhoDunnit{
 									break;
 								}
 
-								theFile->selectedBlameLineIndex = std::max(0, theFile->selectedBlameLineIndex - 1);
+								if (isCtrlDown) { // Jump to the commit above
+									string commitHash = theFile->blameLines[theFile->selectedBlameLineIndex].commitHash;
+									for (int i = std::max(0, theFile->selectedBlameLineIndex - 1); i >= 0; i--) {
+										if (theFile->blameLines[i].commitHash != commitHash) {
+											theFile->selectedBlameLineIndex = i;
+											break;
+										}
+									}
+								} else {
+									theFile->selectedBlameLineIndex = std::max(0, theFile->selectedBlameLineIndex - 1);
+								}
 								theFile->selectedCommitHash = theFile->blameLines[theFile->selectedBlameLineIndex].commitHash;
 								theFile->set_texts();
 							} else if (lastSelectedPane == SelectedPane::CommitLog) {
@@ -754,7 +764,17 @@ class WhoDunnit{
 									break;
 								}
 
-								theFile->selectedBlameLineIndex = std::min((int)theFile->blameLines.size() - 1, theFile->selectedBlameLineIndex + 1);
+								if (isCtrlDown) { // Jump to the commit below
+									string commitHash = theFile->blameLines[theFile->selectedBlameLineIndex].commitHash;
+									for (int i = std::min((int)theFile->blameLines.size() - 1, theFile->selectedBlameLineIndex + 1); i < theFile->blameLines.size(); i++) {
+										if (theFile->blameLines[i].commitHash != commitHash) {
+											theFile->selectedBlameLineIndex = i;
+											break;
+										}
+									}
+								} else {
+									theFile->selectedBlameLineIndex = std::min((int)theFile->blameLines.size() - 1, theFile->selectedBlameLineIndex + 1);
+								}
 								theFile->selectedCommitHash = theFile->blameLines[theFile->selectedBlameLineIndex].commitHash;
 								theFile->set_texts();
 							} else if (lastSelectedPane == SelectedPane::CommitLog) {
@@ -927,8 +947,13 @@ class WhoDunnit{
 
 				if (theFile->selectedBlameLineIndex != -1 && i == theFile->selectedBlameLineIndex) {
 					// TODO: Make this a transparent gradient rectangle instead, so it looks cooler
-					selectedBlameLineRect.setPosition({-1, y});
-					selectedBlameLineRect.setSize({window.getSize().x, step});
+					if (i == startIdx) {
+						selectedBlameLineRect.setPosition({0, y+1});
+						selectedBlameLineRect.setSize({window.getSize().x, step-1});
+					} else {
+						selectedBlameLineRect.setPosition({0, y});
+						selectedBlameLineRect.setSize({window.getSize().x, step});
+					}
 					selectedBlameLineRectVisible = true;
 				}
 			}

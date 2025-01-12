@@ -24,9 +24,7 @@ const sf::Color rightClickMenuBackgroundColor = sf::Color(10,10,10);
 
 const sf::Color tabHighlightColor = sf::Color(100,120,255);
 
-//const sf::Color selectedBlameColor = hsv_to_rgb(200, 0.60, 0.65);
-//const sf::Color selectedBlameColor = hsv_to_rgb(40, 0.65, 0.65);
-//const sf::Color selectedBlameColor = hsv_to_rgb(40, 0.50, 0.60);
 const sf::Color selectedBlameColor = hsv_to_rgb(15, 0.50, 0.60);
+const sf::Color selectedBlameLineRectColor = sf::Color(200,200,200);
 
 #endif // COLORS_HPP
