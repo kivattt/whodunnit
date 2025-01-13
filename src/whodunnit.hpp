@@ -949,10 +949,10 @@ class WhoDunnit{
 					// TODO: Make this a transparent gradient rectangle instead, so it looks cooler
 					if (i == startIdx) {
 						selectedBlameLineRect.setPosition({0, y+1});
-						selectedBlameLineRect.setSize({window.getSize().x, step-1});
+						selectedBlameLineRect.setSize({window.getSize().x, step-2});
 					} else {
 						selectedBlameLineRect.setPosition({0, y});
-						selectedBlameLineRect.setSize({window.getSize().x, step});
+						selectedBlameLineRect.setSize({window.getSize().x, step-1});
 					}
 					selectedBlameLineRectVisible = true;
 				}
