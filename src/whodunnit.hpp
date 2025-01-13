@@ -95,7 +95,7 @@ struct BlameFile {
 
 	// Returns -1 on error
 	int mouse_y_to_blame_line_index(float mouseY, int topbarHeight) {
-		float step = (fontSizePixels + fontSizePixels/2);
+		float step = fontSizePixels + fontSizePixels/2;
 		float yOffset = scrollPositionPixels % int(step) - topbarHeight;
 		int startIdx = std::max(0, int(std::floor(scrollPositionPixels / step)));
 
@@ -658,30 +658,38 @@ class WhoDunnit{
 							theFile->set_texts();
 							break;
 						case sf::Keyboard::Key::Home:
-							if (isCtrlDown) {
-								theFile->scrollPositionPixels = 0;
-							} else if (lastSelectedPane == SelectedPane::BlameLines) {
+							if (lastSelectedPane == SelectedPane::BlameLines) {
 								theFile->selectedBlameLineIndex = 0;
 								theFile->selectedCommitHash = theFile->blameLines[theFile->selectedBlameLineIndex].commitHash;
 								theFile->set_texts();
+								theFile->scrollPositionPixels = 0;
 							} else if (lastSelectedPane == SelectedPane::CommitLog) {
 								theFile->selectedCommitIndex = 0;
 								theFile->selectedCommitHash = theFile->commitLog[theFile->selectedCommitIndex].commitHash;
 								theFile->set_texts();
+								theFile->gitLogScrollPositionPixels = 0;
+							} else {
+								theFile->scrollPositionPixels = 0;
 							}
 							break;
 						case sf::Keyboard::Key::End:
-							if (isCtrlDown) {
-								float step = (fontSizePixels + fontSizePixels/2);
-								theFile->scrollPositionPixels = std::max(0, int(theFile->textLines.size() * step - window.getSize().y));
-							} else if (lastSelectedPane == SelectedPane::BlameLines) {
-								theFile->selectedBlameLineIndex = theFile->blameLines.size()-1;
-								theFile->selectedCommitHash = theFile->blameLines[theFile->selectedBlameLineIndex].commitHash;
-								theFile->set_texts();
-							} else if (lastSelectedPane == SelectedPane::CommitLog) {
-								theFile->selectedCommitIndex = theFile->commitLog.size()-1;
-								theFile->selectedCommitHash = theFile->commitLog[theFile->selectedCommitIndex].commitHash;
-								theFile->set_texts();
+							{
+								float step = fontSizePixels + fontSizePixels/2;
+								float gitLogStep = (float)fontSizePixels * 1.3;
+
+								if (lastSelectedPane == SelectedPane::BlameLines) {
+									theFile->selectedBlameLineIndex = theFile->blameLines.size()-1;
+									theFile->selectedCommitHash = theFile->blameLines[theFile->selectedBlameLineIndex].commitHash;
+									theFile->set_texts();
+									theFile->scrollPositionPixels = std::max(0, int(theFile->textLines.size() * step + topbarFullHeight - window.getSize().y/2));
+								} else if (lastSelectedPane == SelectedPane::CommitLog) {
+									theFile->selectedCommitIndex = theFile->commitLog.size()-1;
+									theFile->selectedCommitHash = theFile->commitLog[theFile->selectedCommitIndex].commitHash;
+									theFile->set_texts();
+									theFile->gitLogScrollPositionPixels = std::max(0, int(theFile->commitLog.size() * gitLogStep + topbarFullHeight - window.getSize().y/2));
+								} else {
+									theFile->scrollPositionPixels = std::max(0, int(theFile->textLines.size() * step + topbarFullHeight - window.getSize().y/2));
+								}
 							}
 							break;
 						case sf::Keyboard::Key::Add: // The '+' key
@@ -742,6 +750,18 @@ class WhoDunnit{
 								}
 								theFile->selectedCommitHash = theFile->blameLines[theFile->selectedBlameLineIndex].commitHash;
 								theFile->set_texts();
+
+								float step = fontSizePixels + fontSizePixels/2;
+								float yOffset = theFile->scrollPositionPixels % int(step) - topbarFullHeight;
+								int startIdx = std::max(0, int(std::floor(theFile->scrollPositionPixels / step)));
+								int selectedYPosition = (theFile->selectedBlameLineIndex - startIdx) * step - yOffset;
+								int numElements = std::min(int(theFile->textLines.size()-startIdx), std::max(0, int(std::ceil((window.getSize().y + yOffset) / step))));
+
+								if (selectedYPosition < topbarFullHeight) {
+									theFile->scrollPositionPixels = std::max(0.0f, step * theFile->selectedBlameLineIndex);
+								} else if (selectedYPosition >= window.getSize().y) {
+									theFile->scrollPositionPixels = std::max(0.0f, step * (theFile->selectedBlameLineIndex - numElements + 1));
+								}
 							} else if (lastSelectedPane == SelectedPane::CommitLog) {
 								if (theFile->selectedCommitIndex == -1) {
 									break;
@@ -777,6 +797,18 @@ class WhoDunnit{
 								}
 								theFile->selectedCommitHash = theFile->blameLines[theFile->selectedBlameLineIndex].commitHash;
 								theFile->set_texts();
+
+								float step = fontSizePixels + fontSizePixels/2;
+								float yOffset = theFile->scrollPositionPixels % int(step) - topbarFullHeight;
+								int startIdx = std::max(0, int(std::floor(theFile->scrollPositionPixels / step)));
+								int selectedYPosition = (theFile->selectedBlameLineIndex - startIdx) * step - yOffset;
+								int numElements = std::min(int(theFile->textLines.size()-startIdx), std::max(0, int(std::ceil((window.getSize().y + yOffset) / step))));
+
+								if (selectedYPosition < topbarFullHeight) {
+									theFile->scrollPositionPixels = std::max(0.0f, step * theFile->selectedBlameLineIndex);
+								} else if (selectedYPosition >= window.getSize().y) {
+									theFile->scrollPositionPixels = std::max(0.0f, step * (theFile->selectedBlameLineIndex - numElements + 1));
+								}
 							} else if (lastSelectedPane == SelectedPane::CommitLog) {
 								if (theFile->selectedCommitIndex == -1) {
 									break;
@@ -920,7 +952,7 @@ class WhoDunnit{
 			button1.set_size(topbarHeight, topbarHeight);
 			button2.set_size(topbarHeight, topbarHeight);
 
-			float step = (fontSizePixels + fontSizePixels/2);
+			float step = fontSizePixels + fontSizePixels/2;
 			//float yOffset = theFile->scrollPositionPixels % int(step) - topbarHeight;
 			float yOffset = theFile->scrollPositionPixels % int(step) - topbarFullHeight;
 			int startIdx = std::max(0, int(std::floor(theFile->scrollPositionPixels / step)));
