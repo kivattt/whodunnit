@@ -706,10 +706,6 @@ class WhoDunnit{
 							}
 							break;
 						case sf::Keyboard::Key::Tab: // Switching tabs
-							if (! (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RControl))) {
-								break;
-							}
-
 							if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LShift) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RShift)) {
 								--tabIndex;
 								if (tabIndex < 0) {
