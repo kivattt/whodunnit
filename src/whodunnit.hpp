@@ -457,7 +457,7 @@ class WhoDunnit{
 
 	vector <BlameFile> blameFiles;
 	BlameFile *theFile;
-	SelectedPane lastSelectedPane = SelectedPane::SourceCode;
+	SelectedPane selectedPane = SelectedPane::SourceCode;
 
 	int tabIndex = 0;
 
@@ -617,6 +617,10 @@ class WhoDunnit{
 			updateGitBlame();
 		});
 
+		sf::RectangleShape secondTopBarBlameLinesRect;
+		sf::RectangleShape secondTopBarTabsRect;
+		sf::RectangleShape secondTopBarGitLogRect;
+
 		sf::Clock clock;
 		while (window.isOpen()) {
 			while (const std::optional event = window.pollEvent()) {
@@ -661,12 +665,12 @@ class WhoDunnit{
 							theFile->set_texts();
 							break;
 						case sf::Keyboard::Key::Home:
-							if (lastSelectedPane == SelectedPane::BlameLines) {
+							if (selectedPane == SelectedPane::BlameLines) {
 								theFile->selectedBlameLineIndex = 0;
 								theFile->selectedCommitHash = theFile->blameLines[theFile->selectedBlameLineIndex].commitHash;
 								theFile->set_texts();
 								theFile->scrollPositionPixels = 0;
-							} else if (lastSelectedPane == SelectedPane::CommitLog) {
+							} else if (selectedPane == SelectedPane::CommitLog) {
 								theFile->selectedCommitIndex = 0;
 								theFile->selectedCommitHash = theFile->commitLog[theFile->selectedCommitIndex].commitHash;
 								theFile->set_texts();
@@ -680,12 +684,12 @@ class WhoDunnit{
 								int step = fontSizePixels + fontSizePixels/2;
 								int gitLogStep = (float)fontSizePixels * GIT_LOG_ENTRY_HEIGHT_MULTIPLIER;
 
-								if (lastSelectedPane == SelectedPane::BlameLines) {
+								if (selectedPane == SelectedPane::BlameLines) {
 									theFile->selectedBlameLineIndex = theFile->blameLines.size()-1;
 									theFile->selectedCommitHash = theFile->blameLines[theFile->selectedBlameLineIndex].commitHash;
 									theFile->set_texts();
 									theFile->scrollPositionPixels = std::max(0, int(theFile->textLines.size() * step + topbarFullHeight - window.getSize().y/2));
-								} else if (lastSelectedPane == SelectedPane::CommitLog) {
+								} else if (selectedPane == SelectedPane::CommitLog) {
 									theFile->selectedCommitIndex = theFile->commitLog.size()-1;
 									theFile->selectedCommitHash = theFile->commitLog[theFile->selectedCommitIndex].commitHash;
 									theFile->set_texts();
@@ -725,13 +729,13 @@ class WhoDunnit{
 
 						case sf::Keyboard::Key::Up:
 						case sf::Keyboard::Key::K:
-							if (lastSelectedPane == SelectedPane::SourceCode || (theFile->selectedBlameLineIndex == -1 && theFile->selectedCommitIndex == -1)) {
+							if (selectedPane == SelectedPane::SourceCode || (theFile->selectedBlameLineIndex == -1 && theFile->selectedCommitIndex == -1)) {
 								// Scrolling
 								theFile->scrollPositionPixels -= 60;
 								if (theFile->scrollPositionPixels < 0) {
 									theFile->scrollPositionPixels = 0;
 								}
-							} else if (lastSelectedPane == SelectedPane::BlameLines) {
+							} else if (selectedPane == SelectedPane::BlameLines) {
 								if (theFile->selectedBlameLineIndex == -1) {
 									break;
 								}
@@ -761,7 +765,7 @@ class WhoDunnit{
 								} else if (selectedYPosition >= window.getSize().y) {
 									theFile->scrollPositionPixels = std::max(0, step * (theFile->selectedBlameLineIndex - numElements + 1));
 								}
-							} else if (lastSelectedPane == SelectedPane::CommitLog) {
+							} else if (selectedPane == SelectedPane::CommitLog) {
 								if (theFile->selectedCommitIndex == -1) {
 									break;
 								}
@@ -782,15 +786,15 @@ class WhoDunnit{
 									theFile->gitLogScrollPositionPixels = std::max(0, gitLogStep * (theFile->selectedCommitIndex - numGitLogElements + 1));
 								}
 							} else {
-								PANIC("Unknown lastSelectedPane");
+								PANIC("Unknown selectedPane");
 							}
 							break;
 						case sf::Keyboard::Key::Down:
 						case sf::Keyboard::Key::J:
-							if (lastSelectedPane == SelectedPane::SourceCode || (theFile->selectedBlameLineIndex == -1 && theFile->selectedCommitIndex == -1)) {
+							if (selectedPane == SelectedPane::SourceCode || (theFile->selectedBlameLineIndex == -1 && theFile->selectedCommitIndex == -1)) {
 								// Scrolling
 								theFile->scrollPositionPixels += 60;
-							} else if (lastSelectedPane == SelectedPane::BlameLines) {
+							} else if (selectedPane == SelectedPane::BlameLines) {
 								if (theFile->selectedBlameLineIndex == -1) {
 									break;
 								}
@@ -820,7 +824,7 @@ class WhoDunnit{
 								} else if (selectedYPosition >= window.getSize().y) {
 									theFile->scrollPositionPixels = std::max(0, step * (theFile->selectedBlameLineIndex - numElements + 1));
 								}
-							} else if (lastSelectedPane == SelectedPane::CommitLog) {
+							} else if (selectedPane == SelectedPane::CommitLog) {
 								if (theFile->selectedCommitIndex == -1) {
 									break;
 								}
@@ -841,7 +845,7 @@ class WhoDunnit{
 									theFile->gitLogScrollPositionPixels = std::max(0, gitLogStep * (theFile->selectedCommitIndex - numGitLogElements + 1));
 								}
 							} else {
-								PANIC("Unknown lastSelectedPane");
+								PANIC("Unknown selectedPane");
 							}
 							break;
 					}
@@ -890,7 +894,7 @@ class WhoDunnit{
 					} else if (isLeftClick && within(position.x, rightDividerX-15, rightDividerX+15)) {
 						movingRightDivider = true;
 					} else if (position.x < leftDividerX) { // Clicking a blame on the left
-						lastSelectedPane = SelectedPane::BlameLines;
+						selectedPane = SelectedPane::BlameLines;
 
 						//int index = theFile->mouse_y_to_blame_line_index(position.y, topbarHeight);
 						int index = theFile->mouse_y_to_blame_line_index(position.y, topbarFullHeight);
@@ -910,7 +914,7 @@ class WhoDunnit{
 							rightClickMenu.show();
 						}
 					} else if (position.y > (topbarFullHeight) && position.x > rightDividerX) { // Clicking a commit (Git Log) on the right
-						lastSelectedPane = SelectedPane::CommitLog;
+						selectedPane = SelectedPane::CommitLog;
 
 						int index = theFile->mouse_y_to_git_log_index(position.y, topbarFullHeight);
 						if (index == -1) {
@@ -928,7 +932,7 @@ class WhoDunnit{
 							rightClickMenu.show();
 						}
 					} else {
-						lastSelectedPane = SelectedPane::SourceCode;
+						selectedPane = SelectedPane::SourceCode;
 					}
 				} else if (const auto e = event->getIf<sf::Event::MouseButtonReleased>()) {
 					sf::Mouse::Button button = e->button;
@@ -1041,11 +1045,25 @@ class WhoDunnit{
 				window.draw(selectedBlameLineRect);
 			}
 
-			sf::RectangleShape topBarTabsRect;
-			topBarTabsRect.setPosition({0, topbarHeight});
-			topBarTabsRect.setSize(sf::Vector2f(window.getSize().x, secondTopBarHeight));
-			topBarTabsRect.setFillColor(gitLogBackgroundColor);
-			window.draw(topBarTabsRect);
+			// Second top bar selected colors
+			secondTopBarBlameLinesRect.setFillColor(secondTopBarBackgroundColor);
+			secondTopBarTabsRect.setFillColor(secondTopBarBackgroundColor);
+			secondTopBarGitLogRect.setFillColor(secondTopBarBackgroundColor);
+			if (selectedPane == SelectedPane::BlameLines) {
+				secondTopBarBlameLinesRect.setFillColor(secondTopBarSelectedBackgroundColor);
+			} else if (selectedPane == SelectedPane::SourceCode) {
+				secondTopBarTabsRect.setFillColor(secondTopBarSelectedBackgroundColor);
+			} else if (selectedPane == SelectedPane::CommitLog) {
+				secondTopBarGitLogRect.setFillColor(secondTopBarSelectedBackgroundColor);
+			}
+
+			secondTopBarBlameLinesRect.setPosition({0, topbarHeight});
+			secondTopBarBlameLinesRect.setSize(sf::Vector2f(window.getSize().x, secondTopBarHeight));
+			window.draw(secondTopBarBlameLinesRect);
+
+			secondTopBarTabsRect.setPosition({leftDividerX, topbarHeight});
+			secondTopBarTabsRect.setSize(sf::Vector2f(window.getSize().x, secondTopBarHeight));
+			window.draw(secondTopBarTabsRect);
 
 			int currentTabXOffset = leftDividerX;
 			const int tabPaddingX = 10;
@@ -1180,11 +1198,9 @@ class WhoDunnit{
 				window.draw(e.titleText);
 			}
 
-			sf::RectangleShape topBarGitLogRect;
-			topBarGitLogRect.setPosition({rightDividerX, topbarHeight});
-			topBarGitLogRect.setSize(sf::Vector2f(window.getSize().x - rightDividerX, secondTopBarHeight));
-			topBarGitLogRect.setFillColor(gitLogBackgroundColor);
-			window.draw(topBarGitLogRect);
+			secondTopBarGitLogRect.setPosition({rightDividerX, topbarHeight});
+			secondTopBarGitLogRect.setSize(sf::Vector2f(window.getSize().x - rightDividerX, secondTopBarHeight));
+			window.draw(secondTopBarGitLogRect);
 
 			sf::RectangleShape topBarFullDivider;
 			topBarFullDivider.setPosition({0,topbarFullHeight-1});
