@@ -23,7 +23,7 @@ sudo apt install \
 cmake -B build
 cmake --build build
 
-./build/bin/whodunnit <file>
+./build/bin/main <file>
 ```
 
 The included [JetBrains Mono](fonts/JetBrainsMono-Regular/JetBrainsMono-Regular.ttf) font is licensed under the OFL-1.1. A copy of this license is included in [fonts/JetBrainsMono-Regular/OFL.txt](fonts/JetBrainsMono-Regular/OFL.txt)\
