@@ -2,6 +2,8 @@
 #define WHODUNNIT_HPP
 
 #include <iostream>
+#include <climits>
+#include <cfloat>
 #include <algorithm>
 #include <optional>
 #include <unistd.h>
@@ -466,6 +468,38 @@ class WhoDunnit{
 	bool movingLeftDivider = false;
 	bool movingRightDivider = false;
 
+	sf::Time frameTimeDuration = sf::seconds(1);
+	//sf::Time frameRateDuration = sf::milliseconds(333);
+	sf::Time frameRateDuration = sf::milliseconds(100);
+	bool frameTimesVisible = false;
+	double frameTimeMin = ULLONG_MAX;
+	double frameTimeMax = 0;
+	double frameTimeAvg = 0;
+	double frameRate = DBL_MAX;
+	sf::Text frameTimeMinText;
+	sf::Text frameTimeMaxText;
+	sf::Text frameTimeAvgText;
+	sf::Text frameRateText;
+	int framesElapsed = 0;
+	int lastNFramesElapsed = 1; // To prevent divide-by-zero
+
+	WhoDunnit() : frameTimeMinText(interFont), frameTimeMaxText(interFont), frameTimeAvgText(interFont), frameRateText(interFont) {
+		frameTimeMinText.setCharacterSize(16);
+		frameTimeMaxText.setCharacterSize(16);
+		frameTimeAvgText.setCharacterSize(16);
+		frameRateText.setCharacterSize(16);
+
+		frameTimeMinText.setString("min: ?");
+		frameTimeMaxText.setString("max: ?");
+		frameTimeAvgText.setString("avg: ?");
+		frameRateText.setString("fps: ?");
+
+		frameTimeMinText.setFillColor(sf::Color(66,245,72));
+		frameTimeMaxText.setFillColor(sf::Color(245,93,66));
+		frameTimeAvgText.setFillColor(sf::Color(66,173,245));
+		frameRateText.setFillColor(sf::Color(200,200,200));
+	}
+
 	void zoom(int level) {
 		// TODO: Make it logarithmic or whatever so the zoom feels intuitive
 		fontSizePixels = std::max(1, level);
@@ -535,7 +569,7 @@ class WhoDunnit{
 		theFile = &blameFiles[tabIndex];
 
 		sf::RenderWindow window(sf::VideoMode({START_WIDTH, START_HEIGHT}), "whodunnit - " + basename(theFile->filename));
-		window.setVerticalSyncEnabled(true);
+		//window.setVerticalSyncEnabled(true);
 		sf::Vector2u oldWindowSize = {START_WIDTH, START_HEIGHT};
 
 		sf::RectangleShape leftDividerRect;
@@ -622,6 +656,8 @@ class WhoDunnit{
 		sf::RectangleShape secondTopBarGitLogRect;
 
 		sf::Clock clock;
+		sf::Clock frameTimeClock;
+		sf::Clock frameRateClock;
 		while (window.isOpen()) {
 			while (const std::optional event = window.pollEvent()) {
 				button1.update(event);
@@ -657,6 +693,9 @@ class WhoDunnit{
 					switch (keyCode) {
 						case sf::Keyboard::Key::Q:
 							window.close();
+							break;
+						case sf::Keyboard::Key::F3:
+							frameTimesVisible = !frameTimesVisible;
 							break;
 						case sf::Keyboard::Key::Escape:
 							theFile->selectedCommitHash = "";
@@ -955,10 +994,8 @@ class WhoDunnit{
 					} else if (movingRightDivider) {
 						rightDividerRect.setFillColor(dividerColorHighlight);
 					} else {
-						//if (position.y > topbarHeight && within(position.x, leftDividerX-15, leftDividerX+15)) {
 						if (position.y > topbarFullHeight && within(position.x, leftDividerX-15, leftDividerX+15)) {
 							leftDividerRect.setFillColor(dividerColorHighlight);
-						//} else if (position.y > topbarHeight && within(position.x, rightDividerX-15, rightDividerX+15)) {
 						} else if (position.y > topbarFullHeight && within(position.x, rightDividerX-15, rightDividerX+15)) {
 							rightDividerRect.setFillColor(dividerColorHighlight);
 						}
@@ -1256,6 +1293,50 @@ class WhoDunnit{
 			button1.draw(window);
 			button2.draw(window);
 			rightClickMenu.draw(window);
+
+			double frameTimeMilliseconds = (double)clock.getElapsedTime().asMicroseconds() / 1000;
+			frameTimeAvg += frameTimeMilliseconds / lastNFramesElapsed;
+			frameTimeMin = frameTimeMilliseconds < frameTimeMin ? frameTimeMilliseconds : frameTimeMin;
+			frameTimeMax = frameTimeMilliseconds > frameTimeMax ? frameTimeMilliseconds : frameTimeMax;
+
+			++framesElapsed;
+
+			double fps = 1000000.0f / clock.getElapsedTime().asMicroseconds();
+			frameRate = fps < frameRate ? fps : frameRate;
+
+			if (frameRateClock.getElapsedTime() > frameRateDuration) {
+				frameRateClock.restart();
+				frameRateText.setString(std::format("fps: {:.0f}", frameRate));
+				frameRate = DBL_MAX;
+			}
+
+			if (frameTimeClock.getElapsedTime() > frameTimeDuration) {
+				frameTimeClock.restart();
+
+				frameTimeMinText.setString(std::format("min: {:.3f}ms", frameTimeMin));
+				frameTimeMaxText.setString(std::format("max: {:.3f}ms", frameTimeMax));
+				frameTimeAvgText.setString(std::format("avg: {:.3f}ms", frameTimeAvg));
+
+				//frameTimeMaxText.setString("max: " + std::to_string(frameTimeMax));
+				//frameTimeAvgText.setString("avg: " + std::to_string(frameTimeAvg));
+
+				frameTimeMin = ULLONG_MAX;
+				frameTimeMax = 0;
+				frameTimeAvg = 0;
+				lastNFramesElapsed = framesElapsed;
+				framesElapsed = 0;
+			}
+			frameTimeMinText.setPosition({window.getSize().x - 520, 10});
+			frameTimeAvgText.setPosition({window.getSize().x - 390, 10});
+			frameTimeMaxText.setPosition({window.getSize().x - 260, 10});
+			frameRateText.setPosition({window.getSize().x - 100, 10});
+
+			if (frameTimesVisible) {
+				window.draw(frameTimeMinText);
+				window.draw(frameTimeMaxText);
+				window.draw(frameTimeAvgText);
+				window.draw(frameRateText);
+			}
 
 			window.display();
 			//std::cout << 1000000.0f / clock.getElapsedTime().asMicroseconds() << '\n';

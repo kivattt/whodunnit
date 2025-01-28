@@ -6,8 +6,8 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 set(CMAKE_CXX_FLAGS "-std=c++23")
-set(CMAKE_CXX_FLAGS_DEBUG "-g")
-set(CMAKE_CXX_FLAGS_RELEASE "-O2")
+set(CMAKE_CXX_FLAGS_DEBUG_INIT "-g")
+set(CMAKE_CXX_FLAGS_RELEASE_INIT "-O2")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
@@ -21,5 +21,5 @@ FetchContent_Declare(SFML
 FetchContent_MakeAvailable(SFML)
 
 add_executable(main src/main.cpp)
-add_executable(tests src/tests.cpp)
+#add_executable(tests src/tests.cpp)
 target_link_libraries(main PRIVATE SFML::Graphics)
